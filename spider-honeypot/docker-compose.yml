@@ -1,0 +1,18 @@
+# Local Postgres for development, matching .env.example.
+# Not needed if you run Postgres natively; point DATABASE_URL at your own instance instead.
+services:
+  postgres:
+    image: postgres:16
+    container_name: spider_honeypot_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: honeypot_user
+      POSTGRES_PASSWORD: honeypot_pass
+      POSTGRES_DB: spider_honeypot
+    ports:
+      - "5432:5432"
+    volumes:
+      - honeypot_pg_data:/var/lib/postgresql/data
+
+volumes:
+  honeypot_pg_data:

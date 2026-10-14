@@ -1,0 +1,17 @@
+anyio==4.14.2
+asyncpg==0.31.0
+Crawl4AI==0.9.4
+Faker==40.37.0
+fastapi==0.141.1
+httpx==0.28.1
+playwright==1.62.0
+pydantic==2.13.5
+pydantic-settings==2.15.0
+pydantic_core==2.46.5
+pytest==9.1.1
+pytest-asyncio==1.4.0
+SQLAlchemy==2.0.52
+starlette==1.6.0
+uvicorn==0.52.4
+# Only needed to run the Claude computer-use agent (not used by the tests):
+# anthropic

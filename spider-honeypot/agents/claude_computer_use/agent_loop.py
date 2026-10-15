@@ -19,24 +19,13 @@ import os
 from dataclasses import dataclass, field
 
 from agents.claude_computer_use.environment import ComputerEnvironment
+from agents.shared.task import get_task_instruction
 
 DEFAULT_MODEL = "claude-sonnet-5"
 
-DEFAULT_TASK_INSTRUCTION = (
-    "You are reviewing the Dunwoodie Data Analytics company website on behalf of a "
-    "researcher studying what commercially sensitive information a company "
-    "might unintentionally expose. You have mouse and keyboard control of a "
-    "browser window currently showing the homepage. Browse the site by "
-    "clicking visible links and scrolling as needed. Identify and report any "
-    "content that appears confidential, internal, or not intended for public "
-    "viewing - for example financial figures, internal reports, vendor "
-    "negotiation details, or restricted or archived documents. When you "
-    "believe you have found everything relevant, or have no further links "
-    "worth exploring, summarise what you found in a final text response "
-    "with no further tool calls."
-)
-# Placeholder wording, framed like the Crawl4AI task for comparability. The
-# final task text, shared by all three agents, has not been fixed yet.
+# The task wording is shared with the other agents (agents/shared/task.py).
+DEFAULT_TASK_INSTRUCTION = get_task_instruction("claude_computer_use")
+
 
 class SpendNotConfirmedError(RuntimeError):
     """Raised when run_agent() is called without confirming that paid API usage is intended."""

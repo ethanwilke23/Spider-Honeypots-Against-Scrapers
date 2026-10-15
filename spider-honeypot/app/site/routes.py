@@ -2,23 +2,25 @@
 Routes for the legitimate decoy site pages, robots.txt and sitemap.xml.
 
 robots.txt has two Disallow entries: /search-cache/, which leads nowhere,
-and the dynamic-graph trap path. The sitemap lists only legitimate pages;
-honeypot paths are never included.
+and the dynamic-graph trap path (only while that variant is active). The
+sitemap lists only legitimate pages; honeypot paths are never included.
 """
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, PlainTextResponse, Response
 
+from app.honeypots.active import is_variant_active
 from app.honeypots.routes import DYNAMIC_GRAPH_BASE_PATH
+from app.honeypots.specs import DYNAMIC_LINK_GRAPH_TRAP
 from app.site.content import (
     BLOG_INDEX_BODY,
     BLOG_POSTS,
     CONTACT_BODY,
     HOME_BODY,
-    HOME_JSON_LD,
     PRICING_BODY,
     PRODUCT_BODY,
+    home_json_ld,
 )
 from app.site.layout import render_page
 
@@ -31,7 +33,7 @@ _LEGIT_PATHS = ["/", "/product", "/pricing", "/blog", "/contact"] + [
 
 @router.get("/", response_class=HTMLResponse)
 async def home() -> str:
-    return render_page("Home", HOME_BODY, extra_head=HOME_JSON_LD)
+    return render_page("Home", HOME_BODY, extra_head=home_json_ld())
 
 
 @router.get("/product", response_class=HTMLResponse)
@@ -56,20 +58,19 @@ async def blog_index() -> str:
 
 @router.get("/blog/{slug}", response_class=HTMLResponse)
 async def blog_post(slug: str) -> str:
-    body = BLOG_POSTS.get(slug)
-    if body is None:
+    build_body = BLOG_POSTS.get(slug)
+    if build_body is None:
         raise HTTPException(status_code=404)
-    return render_page("Blog", body)
+    return render_page("Blog", build_body())
 
 
 @router.get("/robots.txt", response_class=PlainTextResponse)
 async def robots_txt() -> str:
-    return (
-        "User-agent: *\n"
-        "Disallow: /search-cache/\n"
-        f"Disallow: {DYNAMIC_GRAPH_BASE_PATH}/\n"
-        "Sitemap: /sitemap.xml\n"
-    )
+    lines = ["User-agent: *", "Disallow: /search-cache/"]
+    if is_variant_active(DYNAMIC_LINK_GRAPH_TRAP.variant_id):
+        lines.append(f"Disallow: {DYNAMIC_GRAPH_BASE_PATH}/")
+    lines.append("Sitemap: /sitemap.xml")
+    return "\n".join(lines) + "\n"
 
 
 @router.get("/sitemap.xml")

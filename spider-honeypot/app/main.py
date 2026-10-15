@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 
 from app.db import Base, check_connection, engine, wait_for_database
+from app.honeypots.active import active_setting
 from app.honeypots.routes import router as honeypots_router
 from app.middleware import RequestLoggingMiddleware
 from app.models import logging_models  # noqa: F401 (importing registers the models on Base)
@@ -35,4 +36,4 @@ async def health() -> dict:
         await check_connection()
     except Exception as exc:  # report any connection failure as a 503
         raise HTTPException(status_code=503, detail=f"database unreachable: {exc}") from exc
-    return {"status": "ok", "database": "reachable"}
+    return {"status": "ok", "database": "reachable", "honeypot_variant": active_setting()}

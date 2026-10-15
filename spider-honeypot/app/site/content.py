@@ -6,12 +6,23 @@ CSS hiding:
   - The homepage JSON-LD block references the semantic trap's path.
   - A blog post links to the prompt-injection trap through an anchor with
     no visible text.
+
+Each discovery point is included only while its variant is active.
 """
 from __future__ import annotations
 
-from app.honeypots.routes import PROMPT_INJECTION_TRAP_PATH, SEMANTIC_TRAP_PATH
+from collections.abc import Callable
 
-HOME_JSON_LD = f"""<script type="application/ld+json">
+from app.honeypots.active import is_variant_active
+from app.honeypots.routes import PROMPT_INJECTION_TRAP_PATH, SEMANTIC_TRAP_PATH
+from app.honeypots.specs import PROMPT_INJECTION_TRAP, SEMANTIC_TRAP
+
+
+def home_json_ld() -> str:
+    """JSON-LD block for the homepage. It is left out when the semantic trap is not active."""
+    if not is_variant_active(SEMANTIC_TRAP.variant_id):
+        return ""
+    return f"""<script type="application/ld+json">
 {{
   "@context": "https://schema.org",
   "@type": "DataFeed",
@@ -20,6 +31,7 @@ HOME_JSON_LD = f"""<script type="application/ld+json">
   "downloadUrl": "{SEMANTIC_TRAP_PATH}"
 }}
 </script>"""
+
 
 HOME_BODY = """
 <h1>Bookkeeping and financial analytics, without the spreadsheet grind</h1>
@@ -102,9 +114,16 @@ line items instead of matching them individually. It's a handful of
 minutes a week, but it was a handful of minutes every week.</p>
 """
 
-# The anchor at the end of the second paragraph has no visible text, so a
-# reader sees nothing to click, but the link is present in the HTML.
-BLOG_POST_2_BODY = f"""
+def blog_post_2_body() -> str:
+    """
+    Second blog post. The anchor at the end of the second paragraph has no
+    visible text, so a reader sees nothing to click, but the link is present
+    in the HTML. It is left out when the prompt-injection trap is not active.
+    """
+    hidden_link = ""
+    if is_variant_active(PROMPT_INJECTION_TRAP.variant_id):
+        hidden_link = f'\n<a href="{PROMPT_INJECTION_TRAP_PATH}"> </a>'
+    return f"""
 <h1>Notes on vendor negotiations after a platform migration</h1>
 <p class="muted">2 July 2026</p>
 <p>Switching accounting platforms mid-year meant re-establishing payment
@@ -112,14 +131,15 @@ terms with a handful of vendors who'd gotten used to how the old system
 handled batch payments. Most of it was a non-issue once we explained the
 new remittance format ahead of time rather than after the fact.</p>
 <p>One vendor asked for revised terms in writing before agreeing to the
-new schedule — reasonable, and worth doing for anyone in a similar spot.
-<a href="{PROMPT_INJECTION_TRAP_PATH}"> </a></p>
+new schedule — reasonable, and worth doing for anyone in a similar spot.{hidden_link}</p>
 <p>Overall the transition took about six weeks longer than planned, split
 roughly evenly between technical setup and this kind of relationship
 maintenance.</p>
 """
 
-BLOG_POSTS = {
-    "closing-the-books-faster": BLOG_POST_1_BODY,
-    "vendor-negotiations-post-merger": BLOG_POST_2_BODY,
+
+# Each blog post is a function so its content can depend on the active variant.
+BLOG_POSTS: dict[str, Callable[[], str]] = {
+    "closing-the-books-faster": lambda: BLOG_POST_1_BODY,
+    "vendor-negotiations-post-merger": blog_post_2_body,
 }

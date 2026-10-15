@@ -12,7 +12,7 @@ Status key: **Done**, **Partly done**, **Not started**.
 | 3 | Build the three honeypot variants | Done |
 | 4 | Logging and instrumentation | Done |
 | 5 | Agent and scraper harnesses | Partly done |
-| 6 | Experiment design | Not started |
+| 6 | Experiment design | In progress |
 | 7 | Pilot run | Not started |
 | 8 | Full controlled experiment | Not started |
 | 9 | Data analysis | Not started |
@@ -69,14 +69,23 @@ Status key: **Done**, **Partly done**, **Not started**.
   an explicit spending flag, and real runs are planned for Phase 8 to avoid API
   cost until results are being recorded.
 
-## Phase 6: Experiment design (next)
+## Phase 6: Experiment design (in progress)
 
-- Write one task prompt used identically by all three agents.
-- Decide the run matrix: agents, input formats and number of repetitions.
-- Add a randomised, human-like baseline that follows visible links only, using
+Done:
+- A variant switch (`HONEYPOT_VARIANT`) so each honeypot can be tested on its own
+  and a control with no honeypots can be run.
+- One task prompt shared by the Crawl4AI and Claude agents (`agents/shared/task.py`).
+
+To do:
+- A seeded run scheduler that sets the randomised run order and labels each run
+  (agent, variant, repetition).
+- A randomised, human-like baseline that follows visible links only, using
   parameters from the literature, so false-positive rates can be measured.
-- Add a way to clear the logs between recording sessions and a run log template
-  tying each run to its session id or time window.
+- A way to clear the logs between recording sessions and to export each run's
+  server-side records with its label.
+- A written protocol: run matrix, number of repetitions and exact definitions of
+  the four metrics (detection rate, false-positive rate, time to detection and
+  trap depth).
 
 ## Phases 7 to 11
 
@@ -111,6 +120,6 @@ Status key: **Done**, **Partly done**, **Not started**.
 
 ## Open items
 
-- The shared task prompt is not final. The harnesses contain placeholder text.
+- The shared task prompt is a first version and may be adjusted after the pilot.
 - Trap parameters (14 pages, 120 second idle timeout, HTML-comment injection
   only) are initial values to review after the pilot.

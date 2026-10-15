@@ -77,6 +77,27 @@ With the server running, `http://127.0.0.1:8000/health` should return
 `{"status":"ok","database":"reachable"}` and `http://127.0.0.1:8000/` shows the
 decoy site.
 
+## Choosing which honeypot is active
+
+The experiment tests each variant on its own, plus a control with no honeypots.
+Set `HONEYPOT_VARIANT` (in `.env` or the environment) before starting the server:
+
+| Value | Effect |
+|---|---|
+| `all` | All three honeypots (the default) |
+| `none` | No honeypots (the control condition) |
+| `semantic`, `prompt_injection`, `link_graph` | Only that honeypot |
+
+```bash
+HONEYPOT_VARIANT=none uvicorn app.main:app                      # bash
+$env:HONEYPOT_VARIANT = "none"; uvicorn app.main:app            # PowerShell
+```
+
+A variant that is not active behaves as if it does not exist: its pages return
+404, the place that advertises it (JSON-LD, hidden link or robots.txt entry) is
+left out, and requests to its path are not logged as trap hits. `/health` reports
+the active setting.
+
 ## Running the agents
 
 Start the server first. Run records are written to `agent_runs/`, which is not
@@ -115,12 +136,14 @@ app/
     schemas.py          Design schemas for the three variants
     specs.py            The concrete specs
     validation.py       Checks that every failure mode is covered
+    active.py           Which variants are switched on (HONEYPOT_VARIANT)
     content.py          Synthetic page content (Faker)
     routes.py           The three honeypot routes and path helpers
 agents/
   playwright_baseline/  Mechanical control crawler
   crawl4ai_scraper/     Crawl4AI harness using a local Ollama model
   claude_computer_use/  Claude computer-use harness (guarded against accidental spend)
+  shared/task.py        The task text shared by the LLM-based agents
 tests/                  Unit tests
 docker-compose.yml      Local Postgres
 PROGRESS.md             Status by phase
@@ -129,8 +152,9 @@ PROGRESS.md             Status by phase
 ## Status
 
 Phases 0 to 5 are complete, except that the Claude computer-use agent has not yet
-been run. The experiment itself (Phases 6 to 11) has not started. See
-`PROGRESS.md` for details and known limitations.
+been run. Phase 6 (experiment design) is in progress. The experiment itself
+(Phases 7 to 11) has not started. See `PROGRESS.md` for details and known
+limitations.
 
 ## About the data
 

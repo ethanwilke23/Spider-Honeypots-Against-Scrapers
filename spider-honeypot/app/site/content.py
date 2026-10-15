@@ -1,22 +1,11 @@
 """
-Static content for the legitimate (non-honeypot) decoy site pages.
+Static page content for the legitimate decoy site.
 
-Phase: 2 (Decoy Web Application)
-
-This module also plants the two "discovery surfaces" that let honeypot
-pages be findable without being human-visible:
-  - The homepage's JSON-LD block references the semantic trap's orphaned
-    endpoint (app/honeypots/routes.py) via a DataFeed downloadUrl — no
-    visible link, but present in structured data a parsing agent might
-    read.
-  - A blog post links to the prompt-injection trap page via an anchor
-    with empty/whitespace text — present in the raw DOM, invisible to a
-    human scanning the rendered page.
-
-Both paths deliberately avoid CSS-hiding (display:none, zero-size, etc.)
-per the Phase 1 design rationale: fidelity/concealment comes from
-placement, not from a technique vision-rendering agents already see
-through.
+Two pages also contain discovery points for the honeypots. Neither uses
+CSS hiding:
+  - The homepage JSON-LD block references the semantic trap's path.
+  - A blog post links to the prompt-injection trap through an anchor with
+    no visible text.
 """
 from __future__ import annotations
 
@@ -113,8 +102,8 @@ line items instead of matching them individually. It's a handful of
 minutes a week, but it was a handful of minutes every week.</p>
 """
 
-# The anchor below has no visible text — a human scanning the rendered
-# page sees nothing to click here, but the href is present in the raw DOM.
+# The anchor at the end of the second paragraph has no visible text, so a
+# reader sees nothing to click, but the link is present in the HTML.
 BLOG_POST_2_BODY = f"""
 <h1>Notes on vendor negotiations after a platform migration</h1>
 <p class="muted">2 July 2026</p>

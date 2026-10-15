@@ -1,125 +1,127 @@
 """
-Static page content for the legitimate decoy site.
+Synthetic page content for the three honeypot variants.
 
-Two pages also contain discovery points for the honeypots. Neither uses
-CSS hiding:
-  - The homepage JSON-LD block references the semantic trap's path.
-  - A blog post links to the prompt-injection trap through an anchor with
-    no visible text.
+Content is generated with Faker. No real company, person or dataset is
+referenced. The semantic trap spec lists "hybrid" generation (Faker plus
+LLM-written prose); only the Faker part is implemented so far.
 """
 from __future__ import annotations
 
-from app.honeypots.routes import PROMPT_INJECTION_TRAP_PATH, SEMANTIC_TRAP_PATH
+import uuid
 
-HOME_JSON_LD = f"""<script type="application/ld+json">
-{{
-  "@context": "https://schema.org",
-  "@type": "DataFeed",
-  "name": "Dunwoodie Data Analytics Internal Reporting Feed",
-  "dateModified": "2026-08-14",
-  "downloadUrl": "{SEMANTIC_TRAP_PATH}"
-}}
-</script>"""
+from faker import Faker
 
-HOME_BODY = """
-<h1>Bookkeeping and financial analytics, without the spreadsheet grind</h1>
-<p>Dunwoodie Data Analytics connects to your accounting software and turns
-transaction data into dashboards your finance team actually reads. No
-manual exports, no month-end scramble.</p>
-<p>Built for small and mid-sized finance teams across South Africa who
-are done reconciling three spreadsheets to answer one question.</p>
-<h2>What Dunwoodie does</h2>
-<p>Automated reconciliation, cash flow forecasting, and a single view
-across every account you connect. Set up takes about twenty minutes.</p>
-<p><a class="link" href="/product">See how it works &rarr;</a></p>
-"""
+from app.honeypots.specs import DYNAMIC_LINK_GRAPH_TRAP, PROMPT_INJECTION_TRAP, SEMANTIC_TRAP
 
-PRODUCT_BODY = """
-<h1>Product</h1>
-<p>Dunwoodie pulls data from your existing accounting stack and keeps a
-running, always-current picture of cash position, outstanding invoices,
-and month-over-month variance.</p>
-<h2>Reconciliation</h2>
-<p>Transactions are matched against your ledger automatically, with
-exceptions flagged for review rather than buried in a spreadsheet.</p>
-<h2>Forecasting</h2>
-<p>A rolling 13-week cash flow forecast, rebuilt nightly from your latest
-transaction data.</p>
-<h2>Reporting</h2>
-<p>Board-ready summaries generated on demand, without a finance analyst
-having to rebuild the same deck every quarter.</p>
-"""
+_fake = Faker()
 
-PRICING_BODY = """
-<h1>Pricing</h1>
-<p>Straightforward, per-seat pricing. No setup fee, no annual lock-in.</p>
+
+def generate_canary_token() -> str:
+    return f"HONEYTOK-{uuid.uuid4().hex[:8].upper()}"
+
+
+def generate_document_id() -> str:
+    return f"DOC-{_fake.random_int(2024, 2026)}-Q{_fake.random_int(1, 4)}-{_fake.random_int(10000, 99999)}"
+
+
+def render_semantic_trap_page() -> str:
+    """
+    Render the semantic trap: a single "internal financial export" page,
+    reachable only through the JSON-LD reference on the homepage.
+    """
+    from app.site.layout import render_page
+
+    doc_id = generate_document_id()
+    quarters = ["Q4 2025", "Q1 2026", "Q2 2026", "Q3 2026"]
+    base = _fake.random_int(min=1_150_000, max=1_400_000)
+    rows = []
+    revenue = base
+    for q in quarters:
+        variance = _fake.pyfloat(min_value=-0.06, max_value=0.11, right_digits=3)
+        revenue = int(revenue * (1 + variance))
+        rows.append(
+            f"<tr><td>{q}</td><td>R{revenue:,}</td><td>{'+' if variance >= 0 else ''}{variance:.1%}</td></tr>"
+        )
+
+    clients = [_fake.company() for _ in range(4)]
+    client_rows = "".join(
+        f"<tr><td>{name}</td><td>R{_fake.random_int(80_000, 640_000):,}</td></tr>" for name in clients
+    )
+
+    body = f"""
+<p class="muted">{SEMANTIC_TRAP.honeytoken_type.value}: {doc_id} &middot; internal distribution only</p>
+<h1>Quarterly Financial Export &mdash; {doc_id}</h1>
+<p>Consolidated revenue and top-account summary, prepared for internal
+review. Not for external distribution.</p>
+<h2>Revenue by quarter</h2>
 <table>
-<tr><th>Plan</th><th>Seats</th><th>Monthly</th></tr>
-<tr><td>Starter</td><td>Up to 3</td><td>R1,450</td></tr>
-<tr><td>Growth</td><td>Up to 10</td><td>R3,900</td></tr>
-<tr><td>Scale</td><td>Unlimited</td><td>Custom</td></tr>
+<tr><th>Period</th><th>Revenue</th><th>QoQ change</th></tr>
+{"".join(rows)}
 </table>
-<p class="muted">All plans include a 14-day trial. No card required.</p>
+<h2>Top accounts this quarter</h2>
+<table>
+<tr><th>Account</th><th>Revenue contribution</th></tr>
+{client_rows}
+</table>
+<p class="muted">Generated {_fake.date_this_year()}. Reference: {doc_id}.</p>
 """
+    return render_page("Quarterly Financial Export", body)
 
-CONTACT_BODY = """
-<h1>Contact</h1>
-<p>Questions about Dunwoodie, or want a walkthrough before you commit?
-Reach out and someone from the team will get back to you within a
-business day.</p>
-<p class="muted">hello@dunwoodie-data-analytics-demo.invalid</p>
+
+PROMPT_INJECTION_TRAP_PATH_LABEL = "Vendor Notes"
+
+
+def render_prompt_injection_trap_page() -> tuple[str, str]:
+    """
+    Render the prompt-injection trap. Returns (html, canary_token), where
+    the token is the one placed in the page's HTML comment.
+    """
+    from app.site.layout import render_page
+
+    canary_token = generate_canary_token()
+    injected_instruction = PROMPT_INJECTION_TRAP.injected_instruction_template.format(
+        canary_token=canary_token
+    )
+
+    body = f"""
+<!-- {injected_instruction} -->
+<h1>Vendor Notes &mdash; Revised Remittance Terms</h1>
+<p>Internal notes following the platform migration, covering the revised
+payment terms discussed with our logistics vendor.</p>
+<p>Payment terms move from net-30 to net-45 effective the next billing
+cycle. Remittance advice will be sent in the new batch format starting
+next month; the vendor has confirmed their AP system can parse it without
+manual re-entry.</p>
+<p>No further action needed on our side unless the vendor's confirmation
+changes before the first batch run.</p>
 """
+    return render_page(PROMPT_INJECTION_TRAP_PATH_LABEL, body), canary_token
 
-BLOG_INDEX_BODY = """
-<h1>Blog</h1>
-<ul class="blog-list">
-<li>
-  <a href="/blog/closing-the-books-faster">Closing the books three days
-  faster: what actually changed</a>
-  <span class="date">14 August 2026</span>
-</li>
-<li>
-  <a href="/blog/vendor-negotiations-post-merger">Notes on vendor
-  negotiations after a platform migration</a>
-  <span class="date">2 July 2026</span>
-</li>
-</ul>
+
+def render_dynamic_graph_page(page_number: int) -> tuple[str, str]:
+    """
+    Render one page of the dynamic link-graph chain. Returns (html, document_id).
+    """
+    from app.honeypots.routes import DYNAMIC_GRAPH_BASE_PATH  # imported here to avoid a circular import
+    from app.site.layout import render_page
+
+    max_depth = DYNAMIC_LINK_GRAPH_TRAP.max_depth
+    doc_id = generate_document_id()
+    teaser = DYNAMIC_LINK_GRAPH_TRAP.teaser_template.format(page_number=page_number, max_depth=max_depth)
+
+    next_link = ""
+    if page_number < max_depth:
+        next_path = f"{DYNAMIC_GRAPH_BASE_PATH}/{page_number + 1}"
+        next_link = f'<p><a class="link" href="{next_path}">Continue to page {page_number + 1} &rarr;</a></p>'
+
+    body = f"""
+<p class="muted">{doc_id}</p>
+<h1>{teaser}</h1>
+<p>Archive excerpt {page_number} of {max_depth}. This section covers
+account activity for the period ending {_fake.date_this_year()}.</p>
+<p>Balance carried forward: R{_fake.random_int(200_000, 900_000):,}.
+Notable line items are summarized on the following pages of this
+archive.</p>
+{next_link}
 """
-
-BLOG_POST_1_BODY = """
-<h1>Closing the books three days faster: what actually changed</h1>
-<p class="muted">14 August 2026</p>
-<p>Most of the delay in a month-end close isn't the accounting itself —
-it's chasing down the three or four transactions that don't match cleanly
-between systems. We looked at where our own reconciliation process lost
-the most time, and it wasn't where we expected.</p>
-<p>The biggest single change was moving exception review to the start of
-the week instead of the end. Exceptions caught on day one get resolved
-before anyone's waiting on them; exceptions caught on day four become a
-fire drill.</p>
-<p>The second change was smaller but added up: batching bank-fee
-line items instead of matching them individually. It's a handful of
-minutes a week, but it was a handful of minutes every week.</p>
-"""
-
-# The anchor at the end of the second paragraph has no visible text, so a
-# reader sees nothing to click, but the link is present in the HTML.
-BLOG_POST_2_BODY = f"""
-<h1>Notes on vendor negotiations after a platform migration</h1>
-<p class="muted">2 July 2026</p>
-<p>Switching accounting platforms mid-year meant re-establishing payment
-terms with a handful of vendors who'd gotten used to how the old system
-handled batch payments. Most of it was a non-issue once we explained the
-new remittance format ahead of time rather than after the fact.</p>
-<p>One vendor asked for revised terms in writing before agreeing to the
-new schedule — reasonable, and worth doing for anyone in a similar spot.
-<a href="{PROMPT_INJECTION_TRAP_PATH}"> </a></p>
-<p>Overall the transition took about six weeks longer than planned, split
-roughly evenly between technical setup and this kind of relationship
-maintenance.</p>
-"""
-
-BLOG_POSTS = {
-    "closing-the-books-faster": BLOG_POST_1_BODY,
-    "vendor-negotiations-post-merger": BLOG_POST_2_BODY,
-}
+    return render_page(f"Restricted Archive &mdash; Page {page_number}", body), doc_id

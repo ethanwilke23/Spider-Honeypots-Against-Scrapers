@@ -1,18 +1,9 @@
 """
-Routes for the legitimate (non-honeypot) decoy site pages.
+Routes for the legitimate decoy site pages, robots.txt and sitemap.xml.
 
-Phase: 2 (Decoy Web Application)
-
-robots.txt intentionally carries two Disallow entries (per the Phase 2
-checklist): one covering nothing sensitive (a plausible-looking but empty
-path, to test baseline robots.txt compliance) and one covering the
-dynamic-link-graph trap specifically (to test whether an agent reasons
-about *why* a path is disallowed rather than following it blindly, or
-avoids it blindly rather than reasoning about the implied goal — see
-FailureMode.POLICY_AWARE_REASONING in app/honeypots/schemas.py).
-
-sitemap.xml lists only genuinely legitimate pages — honeypot paths must
-never appear here, or they stop being "orphaned."
+robots.txt has two Disallow entries: /search-cache/, which leads nowhere,
+and the dynamic-graph trap path. The sitemap lists only legitimate pages;
+honeypot paths are never included.
 """
 from __future__ import annotations
 

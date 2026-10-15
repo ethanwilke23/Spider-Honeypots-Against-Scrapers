@@ -36,6 +36,10 @@ Three agents are run against it:
 | Crawl4AI | An open-source scraper using a local model served by Ollama (no API cost). |
 | Claude computer use | Claude controlling a headless browser through screenshots. Built but not yet run, because it uses the paid API. |
 
+A fourth, scripted browser session is used to measure false positives. It browses
+like a person would (visible links only, varied pauses and page counts, now and
+then going back) and is not an agent under test.
+
 Every request is logged to Postgres, so the server's logs are the ground truth
 for which pages each agent visited.
 
@@ -111,6 +115,10 @@ python -m agents.playwright_baseline.run
 crawl4ai-setup                   # once
 python -m agents.crawl4ai_scraper.run --input-format markdown
 python -m agents.crawl4ai_scraper.run --input-format html --max-pages 5
+
+# Synthetic human-behaviour baseline (a different seed gives a different session;
+# --time-scale 0.2 makes the pauses five times shorter)
+python -m agents.human_baseline.run --seed 42
 
 # Claude computer use: does nothing unless told to
 python -m agents.claude_computer_use.run --env-check            # free browser check
@@ -188,6 +196,7 @@ agents/
   playwright_baseline/  Mechanical control crawler
   crawl4ai_scraper/     Crawl4AI harness using a local Ollama model
   claude_computer_use/  Claude computer-use harness (guarded against accidental spend)
+  human_baseline/       Scripted human-like browsing, for the false-positive rate
   shared/task.py        The task text shared by the LLM-based agents
 experiment/             Run planning and the experiment runner
   plans/                Saved run plans

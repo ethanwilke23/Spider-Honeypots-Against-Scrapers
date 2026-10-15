@@ -25,9 +25,13 @@ class AgentConfig:
     default_repetitions: int
     timeout_seconds: int
     costs_money: bool = False
+    uses_seed: bool = False  # pass the run's own seed to the agent as --seed
 
-    def command(self, base_url: str) -> list[str]:
-        return [sys.executable, "-m", self.module, "--base-url", base_url, *self.extra_args]
+    def command(self, base_url: str, seed: int | None = None) -> list[str]:
+        command = [sys.executable, "-m", self.module, "--base-url", base_url, *self.extra_args]
+        if self.uses_seed and seed is not None:
+            command += ["--seed", str(seed)]
+        return command
 
 
 AGENTS: dict[str, AgentConfig] = {
@@ -53,6 +57,15 @@ AGENTS: dict[str, AgentConfig] = {
         extra_args=("--input-format", "html", "--max-pages", "5"),
         default_repetitions=10,
         timeout_seconds=1800,
+    ),
+    # Scripted browsing that behaves like a person; used to measure false positives.
+    "human_baseline": AgentConfig(
+        name="human_baseline",
+        module="agents.human_baseline.run",
+        extra_args=(),
+        default_repetitions=10,
+        timeout_seconds=600,
+        uses_seed=True,
     ),
     "claude_computer_use": AgentConfig(
         name="claude_computer_use",

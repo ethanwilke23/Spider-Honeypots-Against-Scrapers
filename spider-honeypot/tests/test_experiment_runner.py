@@ -45,6 +45,12 @@ def test_every_agent_command_is_a_python_module_call_with_the_base_url():
         assert command[command.index("--base-url") + 1] == "http://127.0.0.1:9"
 
 
+def test_seed_is_passed_only_to_agents_that_use_one():
+    assert "--seed" in AGENTS["human_baseline"].command("http://x", 123)
+    assert AGENTS["human_baseline"].command("http://x", 123)[-2:] == ["--seed", "123"]
+    assert "--seed" not in AGENTS["playwright_baseline"].command("http://x", 123)
+
+
 def test_only_the_claude_agent_costs_money_and_it_confirms_spend_itself():
     assert [name for name, c in AGENTS.items() if c.costs_money] == ["claude_computer_use"]
     assert "--confirm-spend" in AGENTS["claude_computer_use"].extra_args
@@ -98,7 +104,7 @@ def _use_fake_agent(monkeypatch, tmp_path, script):
     record = tmp_path / "source.json"
 
     class Fake(AgentConfig):
-        def command(self, base_url):
+        def command(self, base_url, seed=None):
             return [sys.executable, str(path), "--out", str(record)]
 
     fake = Fake(name="playwright_baseline", module="x", extra_args=(), default_repetitions=1, timeout_seconds=30)

@@ -185,7 +185,7 @@ def run_one(run: dict, out_dir: Path, port: int) -> dict:
         entry["started_at"] = _now()
         try:
             result = subprocess.run(
-                config.command(base_url),
+                config.command(base_url, run["run_seed"]),
                 cwd=PROJECT_ROOT,
                 env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"},
                 stdout=subprocess.PIPE,

@@ -62,7 +62,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     if not args.execute:
         print(f"Dry run: {len(runs)} run(s) would be done. Add --execute to run them.")
         for run in runs:
-            command = " ".join(AGENTS[run["agent"]].command(f"http://127.0.0.1:{args.port}")[1:])
+            command = " ".join(AGENTS[run["agent"]].command(f"http://127.0.0.1:{args.port}", run["run_seed"])[1:])
             print(f"  {run['order']:>3}  {run['label']}  HONEYPOT_VARIANT={run['condition']}  python {command}")
         return 0
 

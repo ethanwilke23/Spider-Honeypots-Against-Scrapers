@@ -81,9 +81,13 @@ Done:
 - Log helpers (`experiment/logs.py`): empty the server logs, and export each
   run's server-side records with its label plus a summary table.
 
+- A seeded, human-like browsing baseline (`agents/human_baseline/`) for the
+  false-positive rate. It follows visible links only, with varied pauses, page
+  counts and some back-navigation. The literature (Tanaka et al., Scripcariu et
+  al.) supports the pattern but gives no numbers, so the parameter values are
+  chosen, not measured, and are stated as such.
+
 To do:
-- A randomised, human-like baseline that follows visible links only, using
-  parameters from the literature, so false-positive rates can be measured.
 - A written protocol: run matrix, number of repetitions and exact definitions of
   the four metrics (detection rate, false-positive rate, time to detection and
   trap depth).
@@ -109,6 +113,13 @@ To do:
 
 ## Known limitations
 
+- The human baseline is synthetic. It cannot show how real visitors behave, and
+  it is expected to give a false-positive rate of zero by construction, because
+  the honeypots are only reachable through links a person cannot see or does not
+  have. Its value is confirming that the concealment holds in a rendering
+  browser. Real human data is left to future work.
+- The human baseline does not model time of day, which has no effect on a
+  local testbed.
 - Crawl4AI sometimes silently drops a page from its results when the returned
   URL differs from the queued URL. The server's request log is treated as the
   source of truth for which pages were visited.

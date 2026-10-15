@@ -5,6 +5,8 @@ Command line for the experiment scheduler.
     python -m experiment run --plan pilot                # shows what would run
     python -m experiment run --plan pilot --execute      # runs the free agents
     python -m experiment status --plan pilot
+    python -m experiment logs export --plan pilot        # save each run's server-side records
+    python -m experiment logs reset --yes                # empty the server logs
 
 Paid Claude runs need both --execute and --confirm-spend.
 """
@@ -98,6 +100,42 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_logs(args: argparse.Namespace) -> int:
+    try:
+        return _logs_command(args)
+    except (OSError, ConnectionError) as exc:
+        print(f"Could not reach the database: {exc}\nIs Postgres running (docker compose up -d)?")
+        return 2
+
+
+def _logs_command(args: argparse.Namespace) -> int:
+    from experiment import logs
+
+    if args.action == "status":
+        counts = logs.run_async(logs.count_rows())
+        print(f"request_log: {counts['request_log']} rows, trap_hit_event: {counts['trap_hit_event']} rows")
+        return 0
+
+    if args.action == "export":
+        if not args.plan:
+            raise ValueError("--plan is required for export.")
+        rows = logs.run_async(logs.export_plan(args.plan, only_missing=args.only_missing))
+        print(f"Exported {len(rows)} run(s) to agent_runs/experiment/{args.plan}/server_records/ (summary.csv included).")
+        for row in rows:
+            flag = f"  UNEXPECTED trap hits: {row['unexpected_trap_hits']}" if row["unexpected_trap_hits"] else ""
+            print(f"  {row['label']}: {row['requests']} requests, {row['trap_hits']} trap hit(s){flag}")
+        return 0
+
+    counts = logs.run_async(logs.count_rows())
+    print(f"The server logs hold {counts['request_log']} request rows and {counts['trap_hit_event']} trap hits.")
+    if not args.yes:
+        print("Nothing deleted. Export any runs you want to keep first, then add --yes to empty the logs.")
+        return 0
+    logs.run_async(logs.reset_logs())
+    print("Server logs emptied.")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="python -m experiment", description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -123,6 +161,13 @@ def main() -> int:
     s = sub.add_parser("status", help="Show progress for a plan.")
     s.add_argument("--plan", required=True)
     s.set_defaults(func=cmd_status)
+
+    g = sub.add_parser("logs", help="Show, export or empty the server logs.")
+    g.add_argument("action", choices=["status", "export", "reset"])
+    g.add_argument("--plan", help="Plan to export (export only).")
+    g.add_argument("--only-missing", action="store_true", help="Export: keep files that already exist.")
+    g.add_argument("--yes", action="store_true", help="Reset: really delete the rows.")
+    g.set_defaults(func=cmd_logs)
 
     args = parser.parse_args()
     try:

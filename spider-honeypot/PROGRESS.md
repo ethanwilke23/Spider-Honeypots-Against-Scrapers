@@ -78,12 +78,12 @@ Done:
 - A seeded run scheduler (`experiment/`): randomised block design, one label per
   run (agent, condition, repetition), a server started per run with the right
   variant, and a resumable manifest. Paid runs need an extra flag.
+- Log helpers (`experiment/logs.py`): empty the server logs, and export each
+  run's server-side records with its label plus a summary table.
 
 To do:
 - A randomised, human-like baseline that follows visible links only, using
   parameters from the literature, so false-positive rates can be measured.
-- A way to clear the logs between recording sessions and to export each run's
-  server-side records with its label.
 - A written protocol: run matrix, number of repetitions and exact definitions of
   the four metrics (detection rate, false-positive rate, time to detection and
   trap depth).

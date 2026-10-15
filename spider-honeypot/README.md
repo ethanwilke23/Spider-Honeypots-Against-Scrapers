@@ -146,11 +146,26 @@ python -m experiment status --plan pilot
 python -m experiment run --plan pilot --execute
 ```
 
+The server logs build up across runs, and the scheduler does not touch them. After
+a batch of runs, export each run's server-side records, and empty the logs before
+a recording session so test traffic does not mix with results:
+
+```bash
+python -m experiment logs status                  # row counts
+python -m experiment logs export --plan pilot     # one file per run, plus summary.csv
+python -m experiment logs reset                   # shows what would be deleted
+python -m experiment logs reset --yes             # empties request_log and trap_hit_event
+```
+
+Each export file holds the requests the server logged during that run, marked by
+whether they came from the agent's own session. Export before resetting, because
+reset deletes the only copy of the server-side data.
+
 Runs that use the paid Claude agent are left out unless `--confirm-spend` is also
 given, and nothing is run at all without `--execute`. Results go to
 `agent_runs/experiment/<plan name>/` (not committed): a `manifest.json` with the
-start and finish time and session id of every run, the agent records, and the
-agent and server output of each run. The plan files are committed.
+start and finish time and session id of every run, the agent records, the
+agent and server output of each run, and the exported server records. The plan files are committed.
 
 ## Repository layout
 

@@ -75,10 +75,11 @@ Done:
 - A variant switch (`HONEYPOT_VARIANT`) so each honeypot can be tested on its own
   and a control with no honeypots can be run.
 - One task prompt shared by the Crawl4AI and Claude agents (`agents/shared/task.py`).
+- A seeded run scheduler (`experiment/`): randomised block design, one label per
+  run (agent, condition, repetition), a server started per run with the right
+  variant, and a resumable manifest. Paid runs need an extra flag.
 
 To do:
-- A seeded run scheduler that sets the randomised run order and labels each run
-  (agent, variant, repetition).
 - A randomised, human-like baseline that follows visible links only, using
   parameters from the literature, so false-positive rates can be measured.
 - A way to clear the logs between recording sessions and to export each run's

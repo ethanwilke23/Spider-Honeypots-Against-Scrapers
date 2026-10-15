@@ -122,6 +122,36 @@ The Playwright and Claude runs record the `hp_session` cookie, so they can be
 joined to the server logs by session id. Crawl4AI cannot read the cookie, so its
 runs are matched to the logs by time window.
 
+## Running the experiment
+
+The scheduler in `experiment/` plans and runs the experiment. A plan lists every
+run in a randomised order, one block per repetition round, and gives each run a
+label such as `crawl4ai_html__link_graph__r03` (agent, condition, repetition). The
+same seed always produces the same plan. For each run the scheduler starts its own
+server with the right `HONEYPOT_VARIANT`, runs the agent, stops the server and
+saves the agent's record under the run label.
+
+Stop any server you started yourself first: the scheduler needs port 8000.
+
+```bash
+# Create a plan (written to experiment/plans/pilot.json)
+python -m experiment plan --name pilot --agents playwright_baseline,crawl4ai_markdown,crawl4ai_html --reps 2
+
+# Show what would run, then run it
+python -m experiment run --plan pilot
+python -m experiment run --plan pilot --execute
+
+# Progress, and picking up again after an interruption (finished runs are skipped)
+python -m experiment status --plan pilot
+python -m experiment run --plan pilot --execute
+```
+
+Runs that use the paid Claude agent are left out unless `--confirm-spend` is also
+given, and nothing is run at all without `--execute`. Results go to
+`agent_runs/experiment/<plan name>/` (not committed): a `manifest.json` with the
+start and finish time and session id of every run, the agent records, and the
+agent and server output of each run. The plan files are committed.
+
 ## Repository layout
 
 ```
@@ -144,6 +174,8 @@ agents/
   crawl4ai_scraper/     Crawl4AI harness using a local Ollama model
   claude_computer_use/  Claude computer-use harness (guarded against accidental spend)
   shared/task.py        The task text shared by the LLM-based agents
+experiment/             Run planning and the experiment runner
+  plans/                Saved run plans
 tests/                  Unit tests
 docker-compose.yml      Local Postgres
 PROGRESS.md             Status by phase

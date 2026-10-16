@@ -6,7 +6,7 @@ them, or none be active. This allows each experimental condition to be run
 separately, including a control with no honeypots.
 
 An inactive variant behaves as if it does not exist: its pages return 404,
-the place where it is advertised (JSON-LD, hidden link, robots.txt entry)
+the place where it is advertised (the visible link, JSON-LD entry or robots.txt entry)
 is left out, and requests to its path are not logged as trap hits.
 """
 from app.config import get_settings

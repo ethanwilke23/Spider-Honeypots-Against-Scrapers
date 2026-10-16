@@ -6,6 +6,11 @@ against its own server, all requests between a run's start and finish times
 belong to that run. Each export file holds those requests, flagged by whether
 they came from the agent's own session (the Playwright baseline also fetches
 robots.txt in a separate one-request session, which is kept but flagged).
+
+The page script also reports DOM events (page views, clicks, time on page,
+scrolling, mouse and key activity) to /_events. Those are the proposal's
+"DOM-event" log level and are exported next to the requests, matched to the
+same window.
 """
 from __future__ import annotations
 
@@ -28,6 +33,7 @@ WINDOW_MARGIN = timedelta(seconds=1)
 SUMMARY_COLUMNS = [
     "label", "agent", "condition", "repetition", "requests", "agent_session_requests",
     "trap_hits", "first_trap_hit_at", "max_graph_depth", "unexpected_trap_hits",
+    "client_events", "clicks", "untrusted_clicks", "total_dwell_ms",
 ]
 
 
@@ -39,9 +45,11 @@ def run_window(entry: dict) -> tuple[datetime, datetime]:
     return start, end
 
 
-def build_export(entry: dict, rows: list[dict]) -> dict:
-    """rows: one dict per request, with the trap fields, oldest first."""
+def build_export(entry: dict, rows: list[dict], events: list[dict] | None = None) -> dict:
+    """rows: one dict per request, with the trap fields, oldest first.
+    events: the page-script events in the same window (optional)."""
     agent_session = entry.get("session_id")
+    events = [{**e, "in_agent_session": (e["session_id"] == agent_session) if agent_session else None} for e in (events or [])]
     requests = [{**r, "in_agent_session": (r["session_id"] == agent_session) if agent_session else None} for r in rows]
     hits = [r for r in requests if r["trap_variant"]]
     unexpected = [r["id"] for r in hits if r["trap_variant"] != _variant_id_for(entry["condition"])]
@@ -57,6 +65,8 @@ def build_export(entry: dict, rows: list[dict]) -> dict:
         "trap_hit_count": len(hits),
         "unexpected_trap_hit_request_ids": unexpected,
         "requests": requests,
+        "client_event_count": len(events),
+        "client_events": events,
     }
 
 
@@ -74,6 +84,9 @@ def _variant_id_for(condition: str) -> str | None:
 def summary_row(export: dict) -> dict:
     hits = [r for r in export["requests"] if r["trap_variant"]]
     depths = [r["graph_depth"] for r in hits if r["graph_depth"] is not None]
+    events = export.get("client_events", [])
+    clicks = [e for e in events if e["event_type"] == "click"]
+    dwell = [e["payload"].get("dwell_ms") for e in events if e["event_type"] == "leave"]
     return {
         "label": export["label"],
         "agent": export["agent"],
@@ -85,6 +98,10 @@ def summary_row(export: dict) -> dict:
         "first_trap_hit_at": hits[0]["timestamp"] if hits else "",
         "max_graph_depth": max(depths) if depths else "",
         "unexpected_trap_hits": len(export["unexpected_trap_hit_request_ids"]),
+        "client_events": len(events),
+        "clicks": len(clicks),
+        "untrusted_clicks": sum(1 for e in clicks if e["payload"].get("trusted") is False),
+        "total_dwell_ms": sum(d for d in dwell if isinstance(d, (int, float))),
     }
 
 
@@ -92,22 +109,48 @@ def summary_row(export: dict) -> dict:
 
 async def count_rows() -> dict[str, int]:
     from app.db import AsyncSessionLocal
-    from app.models.logging_models import RequestLog, TrapHitEvent
+    from app.models.logging_models import ClientEvent, RequestLog, TrapHitEvent
 
     async with AsyncSessionLocal() as db:
         requests = (await db.execute(select(func.count()).select_from(RequestLog))).scalar_one()
         hits = (await db.execute(select(func.count()).select_from(TrapHitEvent))).scalar_one()
-    return {"request_log": requests, "trap_hit_event": hits}
+        events = (await db.execute(select(func.count()).select_from(ClientEvent))).scalar_one()
+    return {"request_log": requests, "trap_hit_event": hits, "client_event": events}
 
 
 async def reset_logs() -> None:
     from app.db import AsyncSessionLocal
-    from app.models.logging_models import RequestLog, TrapHitEvent
+    from app.models.logging_models import ClientEvent, RequestLog, TrapHitEvent
 
     async with AsyncSessionLocal() as db:
+        await db.execute(delete(ClientEvent))
         await db.execute(delete(TrapHitEvent))
         await db.execute(delete(RequestLog))
         await db.commit()
+
+
+async def fetch_events(start: datetime, end: datetime) -> list[dict]:
+    from app.db import AsyncSessionLocal
+    from app.models.logging_models import ClientEvent
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(ClientEvent)
+            .where(ClientEvent.timestamp >= start, ClientEvent.timestamp <= end)
+            .order_by(ClientEvent.timestamp, ClientEvent.id)
+        )
+        return [
+            {
+                "id": e.id,
+                "session_id": e.session_id,
+                "timestamp": e.timestamp.isoformat(),
+                "event_type": e.event_type,
+                "path": e.path,
+                "client_time": e.client_time.isoformat() if e.client_time else None,
+                "payload": e.payload,
+            }
+            for e in result.scalars()
+        ]
 
 
 async def fetch_window(start: datetime, end: datetime) -> list[dict]:
@@ -154,7 +197,7 @@ async def export_plan(plan_name: str, results_dir: Path = RESULTS_DIR, only_miss
             export = json.loads(target.read_text(encoding="utf-8"))
         else:
             start, end = run_window(entry)
-            export = build_export(entry, await fetch_window(start, end))
+            export = build_export(entry, await fetch_window(start, end), await fetch_events(start, end))
             target.write_text(json.dumps(export, indent=2), encoding="utf-8")
         summaries.append(summary_row(export))
 

@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 14 October 2026.
+Last updated: 15 October 2026.
 
 Status key: **Done**, **Partly done**, **Not started**.
 
@@ -12,7 +12,7 @@ Status key: **Done**, **Partly done**, **Not started**.
 | 3 | Build the three honeypot variants | Done |
 | 4 | Logging and instrumentation | Done |
 | 5 | Agent and scraper harnesses | Partly done |
-| 6 | Experiment design | In progress |
+| 6 | Experiment design | Done |
 | 7 | Pilot run | Not started |
 | 8 | Full controlled experiment | Not started |
 | 9 | Data analysis | Not started |
@@ -42,14 +42,18 @@ Status key: **Done**, **Partly done**, **Not started**.
   product, pricing, blog and contact pages.
 - `robots.txt` with two Disallow entries (one harmless, one covering the
   link-graph trap) and a sitemap that lists only legitimate pages.
-- Discovery points for two of the honeypots: JSON-LD data on the homepage and a
-  link with no visible text in a blog post.
+- Discovery points: a visible link to each honeypot in the blog (the Q3 export in
+  the first post, the vendor notes in the second, the restricted archive on the
+  blog index), plus the JSON-LD entry on the homepage and the robots.txt entry.
+  A link is present only while its variant is active. The earlier design hid the
+  links, which a screenshot-based agent could not see.
 
 ## Phase 3: Honeypot variants
 
 - Synthetic content generated with Faker for all three variants.
-- Routes for the semantic trap, the prompt-injection trap (canary token in an
-  HTML comment, unique per page load) and the link-graph trap (a chain of 14
+- Routes for the semantic trap, the prompt-injection trap (the instruction and a
+  canary token appear in an HTML comment and again in small visible text, each
+  with its own token, unique per page load) and the link-graph trap (a chain of 14
   pages, 404 beyond the last).
 - Not done: LLM-written prose for the semantic trap. Faker content only.
 
@@ -57,6 +61,10 @@ Status key: **Done**, **Partly done**, **Not started**.
 
 - `RequestLog` for every request and `TrapHitEvent` for honeypot hits, written
   automatically by middleware and keyed by a session cookie.
+- A script in every page reports DOM events (view, click, leave with time on the
+  page, scroll depth and mouse and key counts) to `/_events`; they are stored in
+  `ClientEvent` and are not logged as page requests. This gives the three log
+  levels the proposal describes (HTTP, DOM event, session).
 - Tables are created at start-up. There are no migrations.
 - Matching canary tokens against agent output is left to the analysis phase.
 
@@ -67,11 +75,18 @@ Status key: **Done**, **Partly done**, **Not started**.
   input modes.
 - Claude computer use: built and tested offline, not yet run. It is protected by
   an explicit spending flag, and real runs are planned for Phase 8 to avoid API
-  cost until results are being recorded.
+  cost until results are being recorded. It now controls a real Chromium window
+  (tab bar, address bar) on a virtual screen (Xvfb) inside a Docker container,
+  using screen capture and OS-level mouse and keyboard input, so it can click
+  links, type addresses and use keyboard shortcuts. The browser can reach only the
+  test site. The scheduler runs it through `agents/claude_computer_use/docker_run.py`.
+  The desktop environment was tested on a virtual screen in the development
+  sandbox (including the full agent loop with a scripted model); the Docker image
+  could not be built there, so `docker_run --env-check` on the researcher's computer
+  is the first real test of the container.
 
-## Phase 6: Experiment design (in progress)
+## Phase 6: Experiment design
 
-Done:
 - A variant switch (`HONEYPOT_VARIANT`) so each honeypot can be tested on its own
   and a control with no honeypots can be run.
 - One task prompt shared by the Crawl4AI and Claude agents (`agents/shared/task.py`).
@@ -79,23 +94,37 @@ Done:
   run (agent, condition, repetition), a server started per run with the right
   variant, and a resumable manifest. Paid runs need an extra flag.
 - Log helpers (`experiment/logs.py`): empty the server logs, and export each
-  run's server-side records with its label plus a summary table.
-
+  run's server-side requests and page events with its label plus a summary table.
+- A sixth configuration, `playwright_ignore_robots`: the baseline crawler without
+  robots.txt, so a traditional scraper can reach the link-graph chain.
 - A seeded, human-like browsing baseline (`agents/human_baseline/`) for the
   false-positive rate. It follows visible links only, with varied pauses, page
   counts and some back-navigation. The literature (Tanaka et al., Scripcariu et
   al.) supports the pattern but gives no numbers, so the parameter values are
   chosen, not measured, and are stated as such.
+- A written protocol (`docs/PROTOCOL.md`): conditions, run matrix and
+  repetitions (220 runs with the extra configuration), ordering, the procedure for each run, exact definitions
+  of the four measures plus canary compliance, the analysis plan and known
+  limitations. It is frozen after the pilot; later changes are listed in its
+  amendments section.
 
-To do:
-- A written protocol: run matrix, number of repetitions and exact definitions of
-  the four metrics (detection rate, false-positive rate, time to detection and
-  trap depth).
+## Review against the proposal (before the pilot)
+
+The design was checked against the research proposal and four gaps were fixed:
+traps were hidden from screenshot-based agents (now visible links), Claude had no
+address bar (now a real browser in Docker), logging was HTTP only (now page events
+too) and the link-graph chain could not be reached (visible lure plus a crawler
+that ignores robots.txt). Details are in section 8.1 of the protocol.
 
 ## Phases 7 to 11
 
-- Phase 7: a small pilot with the free agents. Check the trap parameters
-  (chain length, idle timeout, injection surface) and the run matrix.
+- Phase 7: a small pilot with the free agents (2 repetitions per condition),
+  after `docker_run --env-check` passes. Check that every harness completes, how
+  long runs take, whether each trap is reached by the agents expected to reach it
+  (the link-graph chain by the crawler that ignores robots.txt, the lures by the
+  others), whether the human baseline's false-positive rate is plausible, and the
+  trap parameters (chain length, idle timeout, injection surface). Then freeze the
+  protocol.
 - Phase 8: run the full experiment, including the paid Claude agent.
 - Phase 9: join server logs to run records, check transcripts for canary tokens
   and compute detection metrics.
@@ -108,23 +137,29 @@ To do:
   same detection signal without any privacy questions.
 - Crawl4AI uses a local open-weight model through Ollama, so it needs no API key
   and costs nothing to run, in contrast to the paid Claude agent.
-- The Claude agent controls a headless Playwright browser with no address bar,
-  so it can only click what is visible on the page.
+- The honeypot links are visible, because the proposal expects agents to be
+  attracted by content, and an agent that works from screenshots cannot see hidden
+  links. The cost is that the false-positive rate becomes meaningful.
+- The Claude agent works from screenshots only. Hybrid commercial agents that also
+  read the page structure are not tested.
+- The Claude agent runs in Docker and the other agents on the host. The window has
+  no window manager and no drawn pointer.
 
 ## Known limitations
 
-- The human baseline is synthetic. It cannot show how real visitors behave, and
-  it is expected to give a false-positive rate of zero by construction, because
-  the honeypots are only reachable through links a person cannot see or does not
-  have. Its value is confirming that the concealment holds in a rendering
-  browser. Real human data is left to future work.
+- The human baseline is synthetic. It cannot show how real visitors behave. Now
+  that the traps are reached by visible links it picks links without modelling
+  curiosity, so its false-positive rate is a property of the site layout under an
+  assumed behaviour, not a measure of real people. Real human data is left to
+  future work.
 - The human baseline does not model time of day, which has no effect on a
   local testbed.
 - Crawl4AI sometimes silently drops a page from its results when the returned
   URL differs from the queued URL. The server's request log is treated as the
   source of truth for which pages were visited.
-- Crawl4AI's markdown input removes HTML comments, so the prompt-injection trap
-  is invisible in that mode. The html mode exposes it, so both are run.
+- Crawl4AI's markdown input removes HTML comments, so only the visible copy of
+  the prompt-injection instruction can be seen in that mode. The html mode sees
+  both, so both are run.
 - Crawl4AI does not expose browser cookies, so its runs are matched to server
   logs by time window instead of session id.
 - The scroll distance per step in the Claude environment (100 pixels) is an
@@ -133,5 +168,5 @@ To do:
 ## Open items
 
 - The shared task prompt is a first version and may be adjusted after the pilot.
-- Trap parameters (14 pages, 120 second idle timeout, HTML-comment injection
-  only) are initial values to review after the pilot.
+- Trap parameters (14 pages, 120 second idle timeout, injection in a comment and
+  as visible text) are initial values to review after the pilot.

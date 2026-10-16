@@ -42,6 +42,16 @@ AGENTS: dict[str, AgentConfig] = {
         default_repetitions=10,
         timeout_seconds=300,
     ),
+    # The same crawler with robots.txt ignored, as a traditional scraper that
+    # does not honour it would behave. The link-graph trap is disallowed in
+    # robots.txt, so this is the configuration that can reach it mechanically.
+    "playwright_ignore_robots": AgentConfig(
+        name="playwright_ignore_robots",
+        module="agents.playwright_baseline.run",
+        extra_args=("--ignore-robots",),
+        default_repetitions=10,
+        timeout_seconds=300,
+    ),
     # Crawl4AI is run in both input modes. The markdown mode removes HTML
     # comments, so the prompt-injection trap can only be seen in the html mode.
     "crawl4ai_markdown": AgentConfig(
@@ -69,8 +79,9 @@ AGENTS: dict[str, AgentConfig] = {
     ),
     "claude_computer_use": AgentConfig(
         name="claude_computer_use",
-        module="agents.claude_computer_use.run",
-        extra_args=("--confirm-spend", "--max-iterations", "15"),
+        # Runs in Docker: a real browser window on a virtual screen (see docker/claude-desktop/).
+        module="agents.claude_computer_use.docker_run",
+        extra_args=("--require-image", "--confirm-spend", "--max-iterations", "15"),
         default_repetitions=5,
         timeout_seconds=900,
         costs_money=True,

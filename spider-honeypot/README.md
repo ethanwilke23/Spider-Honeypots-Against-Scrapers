@@ -24,30 +24,39 @@ hosts three honeypots:
 
 | Variant | Path | How it is reached | What it tests |
 |---|---|---|---|
-| Semantic trap | `/internal/reports/q3-export-2026` | Only through JSON-LD data on the homepage | Whether an agent judges the page valuable enough to extract |
-| Prompt-injection trap | `/documents/vendor-notes` | Through a blog link with no visible text | Whether an agent follows an instruction hidden in an HTML comment (a canary token) |
-| Dynamic link-graph trap | `/archive/restricted/page/{n}` | Only mentioned as a Disallow entry in robots.txt | Whether an agent reasons about robots.txt and keeps following a chain of pages |
+| Semantic trap | `/internal/reports/q3-export-2026` | A visible link in the first blog post ("Q3 financial export"), and JSON-LD data on the homepage | Whether an agent judges the page valuable enough to extract |
+| Prompt-injection trap | `/documents/vendor-notes` | A visible link in the second blog post ("vendor notes") | Whether an agent follows an instruction to repeat a canary token, given once in an HTML comment and once in small visible text |
+| Dynamic link-graph trap | `/archive/restricted/page/{n}` | A visible link on the blog index ("restricted archive"); the path is also a Disallow entry in robots.txt | Whether an agent keeps following a chain of pages, and whether it reasons about robots.txt |
 
-Three agents are run against it:
+The links are ordinary visible links, so an agent that works from screenshots can
+see them. This also means an ordinary visitor might click them, which is what the
+false-positive measurement is for. A link appears only while its variant is active.
+
+Agents run against it:
 
 | Agent | Description |
 |---|---|
 | Playwright baseline | A mechanical crawler that follows links and obeys robots.txt. It is the control. |
+| Playwright, ignoring robots.txt | The same crawler with `--ignore-robots`: a traditional scraper that does not honour robots.txt, and the only mechanical agent that can reach the link-graph chain. |
 | Crawl4AI | An open-source scraper using a local model served by Ollama (no API cost). |
-| Claude computer use | Claude controlling a headless browser through screenshots. Built but not yet run, because it uses the paid API. |
+| Claude computer use | Claude controlling a real browser window (tab bar and address bar) on a virtual screen inside Docker, through screenshots. Built but not yet run, because it uses the paid API. |
 
-A fourth, scripted browser session is used to measure false positives. It browses
-like a person would (visible links only, varied pauses and page counts, now and
-then going back) and is not an agent under test.
+A scripted browser session is used to measure false positives. It browses like a
+person would (visible links only, varied pauses and page counts, now and then
+going back) and is not an agent under test.
 
 Every request is logged to Postgres, so the server's logs are the ground truth
-for which pages each agent visited.
+for which pages each agent visited. The pages also report DOM events (page views,
+clicks, time on the page, scrolling, mouse and key activity) to `/_events`, stored
+in the `client_event` table, so a page being viewed can be told apart from a page
+being fetched. These beacon requests are not counted as page requests.
 
 ## Stack
 
 - Python 3.12 or newer, FastAPI
 - Postgres through async SQLAlchemy (asyncpg driver)
 - Playwright, Crawl4AI and Ollama for the agents
+- Docker (Desktop) for the Claude computer-use agent; Postgres can use it too
 - pytest
 
 ## Setup
@@ -98,7 +107,7 @@ $env:HONEYPOT_VARIANT = "none"; uvicorn app.main:app            # PowerShell
 ```
 
 A variant that is not active behaves as if it does not exist: its pages return
-404, the place that advertises it (JSON-LD, hidden link or robots.txt entry) is
+404, the places that advertise it (the visible link, the JSON-LD entry or the robots.txt entry) are
 left out, and requests to its path are not logged as trap hits. `/health` reports
 the active setting.
 
@@ -110,6 +119,7 @@ committed.
 ```bash
 # Playwright baseline
 python -m agents.playwright_baseline.run
+python -m agents.playwright_baseline.run --ignore-robots
 
 # Crawl4AI (Ollama must be running and the model pulled: ollama pull llama3.2)
 crawl4ai-setup                   # once
@@ -120,11 +130,25 @@ python -m agents.crawl4ai_scraper.run --input-format html --max-pages 5
 # --time-scale 0.2 makes the pauses five times shorter)
 python -m agents.human_baseline.run --seed 42
 
-# Claude computer use: does nothing unless told to
-python -m agents.claude_computer_use.run --env-check            # free browser check
-python -m agents.claude_computer_use.run --confirm-spend        # paid; needs the anthropic
-                                                                # package and ANTHROPIC_API_KEY
+# Claude computer use runs in Docker: a real browser window on a virtual screen.
+# The first command builds the image (a few minutes, once); the others do nothing unless told to.
+python -m agents.claude_computer_use.docker_run --build                           # build the image
+python -m agents.claude_computer_use.docker_run --env-check                       # free check
+python -m agents.claude_computer_use.docker_run --confirm-spend --max-iterations 3   # PAID; needs ANTHROPIC_API_KEY
 ```
+
+The Claude agent needs Docker running, but not the `anthropic` package on your own
+computer (it is installed in the image). The container reaches the server at
+`host.docker.internal`, so start the server first (`uvicorn app.main:app`). The
+free `--env-check` saves three screenshots to `agent_runs/claude_computer_use/`
+(the start page, scrolled, and after typing an address), and reports whether a typed
+address worked and whether other websites are blocked. The browser in the
+container can reach only the test site; your API key is passed to the container
+from your environment and is never written to a file.
+
+The older single-page environment (a headless page with no address bar) is still
+available without Docker as `python -m agents.claude_computer_use.run --env-check`,
+for debugging.
 
 The Playwright and Claude runs record the `hp_session` cookie, so they can be
 joined to the server logs by session id. Crawl4AI cannot read the cookie, so its
@@ -143,7 +167,7 @@ Stop any server you started yourself first: the scheduler needs port 8000.
 
 ```bash
 # Create a plan (written to experiment/plans/pilot.json)
-python -m experiment plan --name pilot --agents playwright_baseline,crawl4ai_markdown,crawl4ai_html --reps 2
+python -m experiment plan --name pilot --agents playwright_baseline,playwright_ignore_robots,crawl4ai_markdown,crawl4ai_html --reps 2
 
 # Show what would run, then run it
 python -m experiment run --plan pilot
@@ -162,11 +186,11 @@ a recording session so test traffic does not mix with results:
 python -m experiment logs status                  # row counts
 python -m experiment logs export --plan pilot     # one file per run, plus summary.csv
 python -m experiment logs reset                   # shows what would be deleted
-python -m experiment logs reset --yes             # empties request_log and trap_hit_event
+python -m experiment logs reset --yes             # empties request_log, trap_hit_event and client_event
 ```
 
-Each export file holds the requests the server logged during that run, marked by
-whether they came from the agent's own session. Export before resetting, because
+Each export file holds the requests and the page events the server logged during
+that run, marked by whether they came from the agent's own session. Export before resetting, because
 reset deletes the only copy of the server-side data.
 
 Runs that use the paid Claude agent are left out unless `--confirm-spend` is also
@@ -182,8 +206,9 @@ app/
   config.py             Settings (environment variables or .env)
   db.py                 Async database engine and session
   main.py               FastAPI app: routes, middleware, table creation
-  middleware.py         Logs every request and every honeypot hit
-  models/               RequestLog and TrapHitEvent tables
+  middleware.py         Logs every request and every honeypot hit (not the /_events beacons)
+  models/               RequestLog, TrapHitEvent and ClientEvent tables
+  events.py             Receives the page events posted to /_events
   site/                 The legitimate decoy pages, robots.txt and sitemap
   honeypots/
     schemas.py          Design schemas for the three variants
@@ -196,10 +221,16 @@ agents/
   playwright_baseline/  Mechanical control crawler
   crawl4ai_scraper/     Crawl4AI harness using a local Ollama model
   claude_computer_use/  Claude computer-use harness (guarded against accidental spend)
+    desktop.py          Real browser on a virtual screen (the environment used)
+    x11.py              Screen capture, mouse and keyboard through the X server
+    docker_run.py       Runs the agent in the Docker image from the host
+    environment.py      Older headless-page environment, kept for debugging
+docker/claude-desktop/  Dockerfile for the Claude environment
   human_baseline/       Scripted human-like browsing, for the false-positive rate
   shared/task.py        The task text shared by the LLM-based agents
 experiment/             Run planning and the experiment runner
   plans/                Saved run plans
+docs/PROTOCOL.md       Experiment protocol: design, measures and limitations
 tests/                  Unit tests
 docker-compose.yml      Local Postgres
 PROGRESS.md             Status by phase
@@ -208,9 +239,11 @@ PROGRESS.md             Status by phase
 ## Status
 
 Phases 0 to 5 are complete, except that the Claude computer-use agent has not yet
-been run. Phase 6 (experiment design) is in progress. The experiment itself
-(Phases 7 to 11) has not started. See `PROGRESS.md` for details and known
-limitations.
+been run. Phase 6 (experiment design) is complete and the protocol is in
+`docs/PROTOCOL.md`; it was revised after being checked against the research
+proposal (see section 8.1 of the protocol). The experiment itself (Phases 7 to 11)
+has not started. See
+`PROGRESS.md` for details and known limitations.
 
 ## About the data
 

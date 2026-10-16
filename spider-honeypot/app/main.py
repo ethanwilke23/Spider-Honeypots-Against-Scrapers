@@ -1,14 +1,15 @@
 """
 FastAPI application entry point.
 
-Mounts the decoy site, the three honeypot routes and the request-logging
-middleware, and creates the database tables at start-up.
+Mounts the decoy site, the three honeypot routes, the page-event endpoint and
+the request-logging middleware, and creates the database tables at start-up.
 """
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 
 from app.db import Base, check_connection, engine, wait_for_database
+from app.events import router as events_router
 from app.honeypots.active import active_setting
 from app.honeypots.routes import router as honeypots_router
 from app.middleware import RequestLoggingMiddleware
@@ -28,6 +29,7 @@ app = FastAPI(title="Spider Honeypot Research Testbed", version="0.1.0", lifespa
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(site_router)
 app.include_router(honeypots_router)
+app.include_router(events_router)
 
 
 @app.get("/health")

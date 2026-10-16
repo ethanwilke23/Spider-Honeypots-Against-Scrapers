@@ -13,5 +13,6 @@ pytest-asyncio==1.4.0
 SQLAlchemy==2.0.52
 starlette==1.6.0
 uvicorn==0.52.4
-# Only needed to run the Claude computer-use agent (not used by the tests):
+# The Claude computer-use agent runs in Docker (docker/claude-desktop/), where
+# anthropic is installed. It is needed here only to run the agent without Docker:
 # anthropic

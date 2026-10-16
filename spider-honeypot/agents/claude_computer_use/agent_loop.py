@@ -9,6 +9,11 @@ It uses the computer_toolset_20260801 tool. Each tool_use block carries a
 member name such as "left_click" and "toolset_name": "computer". The zoom
 member is disabled.
 
+Two environments are available. The default is a bare headless Playwright page
+with no address bar (environment.py). With desktop=True the agent controls a real
+browser window on a virtual screen, with a tab bar and an address bar
+(desktop.py), which is what the experiment uses.
+
 Spending guard: run_agent() makes paid Anthropic API calls, so it refuses
 to run unless called with confirm_spend=True. Importing this module needs
 neither the anthropic package nor an API key.
@@ -43,6 +48,8 @@ class RunTranscript:
     turns: list[dict] = field(default_factory=list)
     final_text: str | None = None
     iterations_used: int = 0
+    environment: str = "page"
+    final_url: str | None = None
 
 
 async def run_agent(
@@ -51,6 +58,7 @@ async def run_agent(
     model: str = DEFAULT_MODEL,
     max_iterations: int = 15,
     confirm_spend: bool = False,
+    desktop: bool = False,
 ) -> RunTranscript:
     if not confirm_spend:
         raise SpendNotConfirmedError(
@@ -70,8 +78,18 @@ async def run_agent(
         )
 
     client = anthropic.AsyncAnthropic(api_key=api_key)
-    env = ComputerEnvironment()
-    transcript = RunTranscript(base_url=base_url, task_instruction=task_instruction, model=model)
+    if desktop:
+        from agents.claude_computer_use.desktop import DesktopEnvironment
+
+        env = DesktopEnvironment()
+    else:
+        env = ComputerEnvironment()
+    transcript = RunTranscript(
+        base_url=base_url,
+        task_instruction=task_instruction,
+        model=model,
+        environment="desktop" if desktop else "page",
+    )
 
     await env.start(base_url)
     try:
@@ -159,6 +177,7 @@ async def run_agent(
             transcript.final_text = f"[stopped after reaching max_iterations={max_iterations} without Claude finishing]"
 
         transcript.session_id = await env.get_session_cookie()
+        transcript.final_url = env.current_url
 
     finally:
         await env.close()

@@ -64,3 +64,26 @@ def test_summary_row_reports_counts_first_hit_and_deepest_page():
 def test_summary_row_is_blank_when_there_are_no_hits():
     row = summary_row(build_export(ENTRY, [_row(1)]))
     assert row["trap_hits"] == 0 and row["first_trap_hit_at"] == "" and row["max_graph_depth"] == ""
+
+
+def _event(id_, type_, session="agent-session", **payload):
+    return {"id": id_, "session_id": session, "timestamp": START.isoformat(), "event_type": type_,
+            "path": "/", "client_time": None, "payload": payload}
+
+
+def test_exports_include_page_events_flagged_by_session():
+    export = build_export(ENTRY, [_row(1)], [_event(1, "view"), _event(2, "view", session="other")])
+    assert export["client_event_count"] == 2
+    assert [e["in_agent_session"] for e in export["client_events"]] == [True, False]
+
+
+def test_exports_without_events_still_work():
+    export = build_export(ENTRY, [_row(1)])
+    assert export["client_event_count"] == 0 and export["client_events"] == []
+
+
+def test_summary_counts_clicks_untrusted_clicks_and_dwell_time():
+    events = [_event(1, "view"), _event(2, "click", trusted=True), _event(3, "click", trusted=False),
+              _event(4, "leave", dwell_ms=1500), _event(5, "leave", dwell_ms=500)]
+    row = summary_row(build_export(ENTRY, [_row(1)], events))
+    assert (row["client_events"], row["clicks"], row["untrusted_clicks"], row["total_dwell_ms"]) == (5, 2, 1, 2000)

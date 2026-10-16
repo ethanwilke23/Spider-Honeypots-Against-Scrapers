@@ -4,6 +4,8 @@ Tests for the HONEYPOT_VARIANT switch.
 They use a small FastAPI app with the site and honeypot routers only, so no
 database is needed.
 """
+import re
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -19,6 +21,7 @@ from app.honeypots.specs import DYNAMIC_LINK_GRAPH_TRAP, SEMANTIC_TRAP
 from app.site.routes import router as site_router
 
 BLOG_POST_WITH_HIDDEN_LINK = "/blog/vendor-negotiations-post-merger"
+SITE_PAGES = ["/", "/product", "/pricing", "/blog", "/contact", "/blog/closing-the-books-faster", BLOG_POST_WITH_HIDDEN_LINK]
 
 # setting -> variants that should be active
 EXPECTED_ACTIVE = {
@@ -65,6 +68,36 @@ def test_discovery_points_appear_only_for_active_variants(client, monkeypatch, s
 
     robots = client.get("/robots.txt").text
     assert (DYNAMIC_GRAPH_BASE_PATH in robots) == ("link_graph" in active)
+
+
+def _link_texts(html, path):
+    """The visible text of every link to `path` in `html`."""
+    return [re.sub(r"<[^>]+>", "", t).strip() for t in re.findall(rf'<a [^>]*href="{re.escape(path)}"[^>]*>(.*?)</a>', html, flags=re.DOTALL)]
+
+
+@pytest.mark.parametrize("setting", EXPECTED_ACTIVE)
+def test_each_honeypot_has_a_visible_link_only_while_active(client, monkeypatch, setting):
+    use_setting(monkeypatch, setting)
+    active = EXPECTED_ACTIVE[setting]
+    lures = [
+        ("semantic", "/blog/closing-the-books-faster", SEMANTIC_TRAP_PATH),
+        ("prompt_injection", BLOG_POST_WITH_HIDDEN_LINK, PROMPT_INJECTION_TRAP_PATH),
+        ("link_graph", "/blog", f"{DYNAMIC_GRAPH_BASE_PATH}/1"),
+    ]
+    for variant, page, target in lures:
+        texts = _link_texts(client.get(page).text, target)
+        if variant in active:
+            assert texts and all(texts), f"{variant}: the link must have readable text"
+        else:
+            assert texts == []
+
+
+def test_no_page_mentions_a_trap_path_when_no_variant_is_active(client, monkeypatch):
+    use_setting(monkeypatch, "none")
+    for page in SITE_PAGES + ["/robots.txt"]:
+        body = client.get(page).text
+        for trap_path in (SEMANTIC_TRAP_PATH, PROMPT_INJECTION_TRAP_PATH, DYNAMIC_GRAPH_BASE_PATH):
+            assert trap_path not in body, f"{page} mentions {trap_path}"
 
 
 @pytest.mark.parametrize("setting", EXPECTED_ACTIVE)

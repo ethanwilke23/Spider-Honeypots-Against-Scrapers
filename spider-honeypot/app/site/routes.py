@@ -3,7 +3,8 @@ Routes for the legitimate decoy site pages, robots.txt and sitemap.xml.
 
 robots.txt has two Disallow entries: /search-cache/, which leads nowhere,
 and the dynamic-graph trap path (only while that variant is active). The
-sitemap lists only legitimate pages; honeypot paths are never included.
+blog index links to that path, so a visible link conflicts with robots.txt.
+The sitemap lists only legitimate pages; honeypot paths are never included.
 """
 from __future__ import annotations
 
@@ -14,12 +15,12 @@ from app.honeypots.active import is_variant_active
 from app.honeypots.routes import DYNAMIC_GRAPH_BASE_PATH
 from app.honeypots.specs import DYNAMIC_LINK_GRAPH_TRAP
 from app.site.content import (
-    BLOG_INDEX_BODY,
     BLOG_POSTS,
     CONTACT_BODY,
     HOME_BODY,
     PRICING_BODY,
     PRODUCT_BODY,
+    blog_index_body,
     home_json_ld,
 )
 from app.site.layout import render_page
@@ -53,7 +54,7 @@ async def contact() -> str:
 
 @router.get("/blog", response_class=HTMLResponse)
 async def blog_index() -> str:
-    return render_page("Blog", BLOG_INDEX_BODY)
+    return render_page("Blog", blog_index_body())
 
 
 @router.get("/blog/{slug}", response_class=HTMLResponse)

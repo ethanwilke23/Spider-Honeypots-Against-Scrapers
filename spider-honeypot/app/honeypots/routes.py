@@ -2,11 +2,12 @@
 Routes for the three honeypot variants, and helpers that let the logging
 middleware recognise honeypot paths.
 
-  - SEMANTIC_TRAP_PATH: not linked from the navigation; referenced only by
-    the JSON-LD data on the homepage (app/site/content.py).
-  - PROMPT_INJECTION_TRAP_PATH: linked from a blog post through an anchor
-    with no visible text.
-  - DYNAMIC_GRAPH_BASE_PATH/{n}: a chain of pages that robots.txt disallows.
+  - SEMANTIC_TRAP_PATH: not in the navigation; linked in the text of the first
+    blog post and referenced by the JSON-LD data on the homepage
+    (app/site/content.py).
+  - PROMPT_INJECTION_TRAP_PATH: linked in the text of the second blog post.
+  - DYNAMIC_GRAPH_BASE_PATH/{n}: a chain of pages that robots.txt disallows,
+    entered from a visible link on the blog index.
 
 A route returns 404 when its variant is not active (see active.py).
 """
@@ -64,9 +65,9 @@ async def semantic_trap_page() -> str:
 async def prompt_injection_trap_page() -> str:
     if not is_variant_active(PROMPT_INJECTION_TRAP.variant_id):
         raise HTTPException(status_code=404)
-    html, _canary_token = render_prompt_injection_trap_page()
-    # The token is not stored. Matching tokens against agent output is
-    # planned as an offline analysis step.
+    html, _comment_token, _visible_token = render_prompt_injection_trap_page()
+    # The tokens are not stored. Matching them against agent output is an
+    # offline analysis step.
     return html
 
 

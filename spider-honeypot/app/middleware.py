@@ -1,7 +1,7 @@
 """
 Request-logging middleware.
 
-Writes a RequestLog row for every request, and a TrapHitEvent row when the
+Writes a RequestLog row for every request (except the browser-event posts), and a TrapHitEvent row when the
 path belongs to a honeypot. Each client receives a session cookie on its
 first request, so one run's navigation can be reconstructed from the logs
 without any cooperation from the client.
@@ -16,6 +16,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.db import AsyncSessionLocal
 from app.honeypots.routes import graph_depth_for_path, is_honeypot_path
 from app.models.logging_models import RequestLog, TrapHitEvent, new_session_id
+from app.site.layout import EVENTS_PATH
 
 SESSION_COOKIE_NAME = "hp_session"
 
@@ -24,6 +25,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
+        if request.url.path == EVENTS_PATH:
+            # Browser events are stored in their own table, not as page requests.
+            return await call_next(request)
+
         session_id = request.cookies.get(SESSION_COOKIE_NAME) or new_session_id()
 
         response = await call_next(request)

@@ -1,0 +1,379 @@
+{
+  "name": "pilot2",
+  "seed": 700,
+  "conditions": [
+    "semantic",
+    "prompt_injection",
+    "link_graph",
+    "none"
+  ],
+  "repetitions": {
+    "playwright_baseline": 2,
+    "playwright_ignore_robots": 2,
+    "crawl4ai_markdown": 2,
+    "crawl4ai_html": 2,
+    "human_baseline": 2
+  },
+  "runs": [
+    {
+      "order": 1,
+      "block": 1,
+      "label": "crawl4ai_html__none__r01",
+      "agent": "crawl4ai_html",
+      "condition": "none",
+      "repetition": 1,
+      "run_seed": 137324795
+    },
+    {
+      "order": 2,
+      "block": 1,
+      "label": "playwright_ignore_robots__semantic__r01",
+      "agent": "playwright_ignore_robots",
+      "condition": "semantic",
+      "repetition": 1,
+      "run_seed": 4102192014
+    },
+    {
+      "order": 3,
+      "block": 1,
+      "label": "human_baseline__none__r01",
+      "agent": "human_baseline",
+      "condition": "none",
+      "repetition": 1,
+      "run_seed": 2345275543
+    },
+    {
+      "order": 4,
+      "block": 1,
+      "label": "human_baseline__prompt_injection__r01",
+      "agent": "human_baseline",
+      "condition": "prompt_injection",
+      "repetition": 1,
+      "run_seed": 3666672183
+    },
+    {
+      "order": 5,
+      "block": 1,
+      "label": "human_baseline__semantic__r01",
+      "agent": "human_baseline",
+      "condition": "semantic",
+      "repetition": 1,
+      "run_seed": 1019520162
+    },
+    {
+      "order": 6,
+      "block": 1,
+      "label": "human_baseline__link_graph__r01",
+      "agent": "human_baseline",
+      "condition": "link_graph",
+      "repetition": 1,
+      "run_seed": 1565310451
+    },
+    {
+      "order": 7,
+      "block": 1,
+      "label": "crawl4ai_markdown__none__r01",
+      "agent": "crawl4ai_markdown",
+      "condition": "none",
+      "repetition": 1,
+      "run_seed": 1802022373
+    },
+    {
+      "order": 8,
+      "block": 1,
+      "label": "playwright_baseline__prompt_injection__r01",
+      "agent": "playwright_baseline",
+      "condition": "prompt_injection",
+      "repetition": 1,
+      "run_seed": 2322847674
+    },
+    {
+      "order": 9,
+      "block": 1,
+      "label": "playwright_ignore_robots__none__r01",
+      "agent": "playwright_ignore_robots",
+      "condition": "none",
+      "repetition": 1,
+      "run_seed": 992953386
+    },
+    {
+      "order": 10,
+      "block": 1,
+      "label": "crawl4ai_html__link_graph__r01",
+      "agent": "crawl4ai_html",
+      "condition": "link_graph",
+      "repetition": 1,
+      "run_seed": 2276365433
+    },
+    {
+      "order": 11,
+      "block": 1,
+      "label": "crawl4ai_markdown__semantic__r01",
+      "agent": "crawl4ai_markdown",
+      "condition": "semantic",
+      "repetition": 1,
+      "run_seed": 820524184
+    },
+    {
+      "order": 12,
+      "block": 1,
+      "label": "crawl4ai_markdown__link_graph__r01",
+      "agent": "crawl4ai_markdown",
+      "condition": "link_graph",
+      "repetition": 1,
+      "run_seed": 1967678407
+    },
+    {
+      "order": 13,
+      "block": 1,
+      "label": "playwright_baseline__semantic__r01",
+      "agent": "playwright_baseline",
+      "condition": "semantic",
+      "repetition": 1,
+      "run_seed": 2542646349
+    },
+    {
+      "order": 14,
+      "block": 1,
+      "label": "playwright_baseline__none__r01",
+      "agent": "playwright_baseline",
+      "condition": "none",
+      "repetition": 1,
+      "run_seed": 1692541396
+    },
+    {
+      "order": 15,
+      "block": 1,
+      "label": "playwright_ignore_robots__link_graph__r01",
+      "agent": "playwright_ignore_robots",
+      "condition": "link_graph",
+      "repetition": 1,
+      "run_seed": 2522584350
+    },
+    {
+      "order": 16,
+      "block": 1,
+      "label": "crawl4ai_html__semantic__r01",
+      "agent": "crawl4ai_html",
+      "condition": "semantic",
+      "repetition": 1,
+      "run_seed": 3556450738
+    },
+    {
+      "order": 17,
+      "block": 1,
+      "label": "playwright_ignore_robots__prompt_injection__r01",
+      "agent": "playwright_ignore_robots",
+      "condition": "prompt_injection",
+      "repetition": 1,
+      "run_seed": 2591171594
+    },
+    {
+      "order": 18,
+      "block": 1,
+      "label": "crawl4ai_markdown__prompt_injection__r01",
+      "agent": "crawl4ai_markdown",
+      "condition": "prompt_injection",
+      "repetition": 1,
+      "run_seed": 3735256283
+    },
+    {
+      "order": 19,
+      "block": 1,
+      "label": "playwright_baseline__link_graph__r01",
+      "agent": "playwright_baseline",
+      "condition": "link_graph",
+      "repetition": 1,
+      "run_seed": 3779463637
+    },
+    {
+      "order": 20,
+      "block": 1,
+      "label": "crawl4ai_html__prompt_injection__r01",
+      "agent": "crawl4ai_html",
+      "condition": "prompt_injection",
+      "repetition": 1,
+      "run_seed": 2610075760
+    },
+    {
+      "order": 21,
+      "block": 2,
+      "label": "crawl4ai_html__none__r02",
+      "agent": "crawl4ai_html",
+      "condition": "none",
+      "repetition": 2,
+      "run_seed": 2313198811
+    },
+    {
+      "order": 22,
+      "block": 2,
+      "label": "human_baseline__none__r02",
+      "agent": "human_baseline",
+      "condition": "none",
+      "repetition": 2,
+      "run_seed": 3246354984
+    },
+    {
+      "order": 23,
+      "block": 2,
+      "label": "playwright_baseline__link_graph__r02",
+      "agent": "playwright_baseline",
+      "condition": "link_graph",
+      "repetition": 2,
+      "run_seed": 2372320720
+    },
+    {
+      "order": 24,
+      "block": 2,
+      "label": "playwright_baseline__semantic__r02",
+      "agent": "playwright_baseline",
+      "condition": "semantic",
+      "repetition": 2,
+      "run_seed": 2560806005
+    },
+    {
+      "order": 25,
+      "block": 2,
+      "label": "crawl4ai_markdown__none__r02",
+      "agent": "crawl4ai_markdown",
+      "condition": "none",
+      "repetition": 2,
+      "run_seed": 1908290521
+    },
+    {
+      "order": 26,
+      "block": 2,
+      "label": "playwright_ignore_robots__none__r02",
+      "agent": "playwright_ignore_robots",
+      "condition": "none",
+      "repetition": 2,
+      "run_seed": 2778384512
+    },
+    {
+      "order": 27,
+      "block": 2,
+      "label": "playwright_ignore_robots__semantic__r02",
+      "agent": "playwright_ignore_robots",
+      "condition": "semantic",
+      "repetition": 2,
+      "run_seed": 1143862299
+    },
+    {
+      "order": 28,
+      "block": 2,
+      "label": "human_baseline__prompt_injection__r02",
+      "agent": "human_baseline",
+      "condition": "prompt_injection",
+      "repetition": 2,
+      "run_seed": 4105971239
+    },
+    {
+      "order": 29,
+      "block": 2,
+      "label": "playwright_baseline__prompt_injection__r02",
+      "agent": "playwright_baseline",
+      "condition": "prompt_injection",
+      "repetition": 2,
+      "run_seed": 4173966423
+    },
+    {
+      "order": 30,
+      "block": 2,
+      "label": "playwright_baseline__none__r02",
+      "agent": "playwright_baseline",
+      "condition": "none",
+      "repetition": 2,
+      "run_seed": 2276789266
+    },
+    {
+      "order": 31,
+      "block": 2,
+      "label": "playwright_ignore_robots__prompt_injection__r02",
+      "agent": "playwright_ignore_robots",
+      "condition": "prompt_injection",
+      "repetition": 2,
+      "run_seed": 874819772
+    },
+    {
+      "order": 32,
+      "block": 2,
+      "label": "crawl4ai_markdown__prompt_injection__r02",
+      "agent": "crawl4ai_markdown",
+      "condition": "prompt_injection",
+      "repetition": 2,
+      "run_seed": 2007834730
+    },
+    {
+      "order": 33,
+      "block": 2,
+      "label": "crawl4ai_html__link_graph__r02",
+      "agent": "crawl4ai_html",
+      "condition": "link_graph",
+      "repetition": 2,
+      "run_seed": 865718950
+    },
+    {
+      "order": 34,
+      "block": 2,
+      "label": "crawl4ai_html__prompt_injection__r02",
+      "agent": "crawl4ai_html",
+      "condition": "prompt_injection",
+      "repetition": 2,
+      "run_seed": 505119960
+    },
+    {
+      "order": 35,
+      "block": 2,
+      "label": "crawl4ai_markdown__link_graph__r02",
+      "agent": "crawl4ai_markdown",
+      "condition": "link_graph",
+      "repetition": 2,
+      "run_seed": 2600810301
+    },
+    {
+      "order": 36,
+      "block": 2,
+      "label": "crawl4ai_markdown__semantic__r02",
+      "agent": "crawl4ai_markdown",
+      "condition": "semantic",
+      "repetition": 2,
+      "run_seed": 2952383255
+    },
+    {
+      "order": 37,
+      "block": 2,
+      "label": "playwright_ignore_robots__link_graph__r02",
+      "agent": "playwright_ignore_robots",
+      "condition": "link_graph",
+      "repetition": 2,
+      "run_seed": 2772577995
+    },
+    {
+      "order": 38,
+      "block": 2,
+      "label": "human_baseline__link_graph__r02",
+      "agent": "human_baseline",
+      "condition": "link_graph",
+      "repetition": 2,
+      "run_seed": 2947166804
+    },
+    {
+      "order": 39,
+      "block": 2,
+      "label": "human_baseline__semantic__r02",
+      "agent": "human_baseline",
+      "condition": "semantic",
+      "repetition": 2,
+      "run_seed": 3307775242
+    },
+    {
+      "order": 40,
+      "block": 2,
+      "label": "crawl4ai_html__semantic__r02",
+      "agent": "crawl4ai_html",
+      "condition": "semantic",
+      "repetition": 2,
+      "run_seed": 2239759019
+    }
+  ]
+}

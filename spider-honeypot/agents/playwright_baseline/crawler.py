@@ -9,11 +9,12 @@ the LLM-based agents can therefore be attributed to semantic reasoning
 rather than crawl strategy.
 
 Expected behaviour against the testbed:
-  - Semantic trap: not reached (it is referenced only from JSON-LD).
-  - Prompt-injection trap: reached through the blog post's link. The
-    crawler produces no output that could hold a canary token, so this
+  - Semantic trap: reached through the link in the first blog post.
+  - Prompt-injection trap: reached through the link in the second blog post.
+    The crawler produces no output that could hold a canary token, so this
     counts as a visit only.
-  - Dynamic-graph trap: not reached (robots.txt disallows it).
+  - Dynamic-graph trap: not reached by default, because robots.txt disallows
+    it; reached through the link on the blog index with ignore-robots.
 """
 from __future__ import annotations
 

@@ -1,8 +1,14 @@
 """
 Command-line entry point for the Claude computer-use harness.
 
-The harness is built but has not yet been used against the paid API. It has
-three modes:
+The harness is built but has not yet been used against the paid API. There are
+two environments. The default is a bare headless browser page with no address
+bar. With --desktop Claude controls a real browser window on a virtual screen,
+with a tab bar and an address bar; this needs Xvfb and is meant to run inside
+the Docker image (see README.md), which the experiment
+scheduler does through `python -m agents.claude_computer_use.docker_run`.
+
+It has three modes:
 
     python -m agents.claude_computer_use.run
         Does nothing and prints how to proceed.
@@ -10,7 +16,8 @@ three modes:
     python -m agents.claude_computer_use.run --env-check
         Free. Opens the browser on the running server and saves two
         screenshots to agent_runs/claude_computer_use/. No API call is made.
-        The visit is logged by the server like any other request.
+        The visit is logged by the server like any other request. With
+        --desktop the screenshots show the whole browser window.
 
     python -m agents.claude_computer_use.run --confirm-spend --max-iterations 3
         A real, paid run. Needs `pip install anthropic` and the
@@ -26,6 +33,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,7 +41,8 @@ from pathlib import Path
 from agents.claude_computer_use.agent_loop import DEFAULT_MODEL, SpendNotConfirmedError, run_agent
 from agents.claude_computer_use.environment import ComputerEnvironment
 
-OUTPUT_DIR = Path(__file__).resolve().parents[2] / "agent_runs" / "claude_computer_use"
+# AGENT_OUTPUT_DIR lets the Docker wrapper point records at a mounted folder.
+OUTPUT_DIR = Path(os.environ.get("AGENT_OUTPUT_DIR") or Path(__file__).resolve().parents[2] / "agent_runs" / "claude_computer_use")
 
 NO_SPEND_MESSAGE = """\
 Nothing was run and nothing was spent.
@@ -49,11 +58,16 @@ To do the real PAID run (only when you are ready to spend):
 """
 
 
-async def env_check(base_url: str) -> None:
+async def env_check(base_url: str, desktop: bool = False) -> None:
     """Free check of the browser environment. No API call is made."""
     import base64
 
-    env = ComputerEnvironment()
+    if desktop:
+        from agents.claude_computer_use.desktop import DesktopEnvironment
+
+        env = DesktopEnvironment()
+    else:
+        env = ComputerEnvironment()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     await env.start(base_url)
     try:
@@ -64,9 +78,22 @@ async def env_check(base_url: str) -> None:
         second = OUTPUT_DIR / "env_check_2_scrolled.png"
         second.write_bytes(base64.b64decode(await env.screenshot_base64()))
 
-        print(f"Environment OK. Page URL: {env.current_url}")
+        print(f"Start page: {env.current_url}")
+        if desktop:
+            # Prove that typing an address works and that the site is the only reachable place.
+            await env.execute("key", {"text": "ctrl+l"})
+            await env.execute("type", {"text": base_url.rstrip("/") + "/blog\n"})
+            third = OUTPUT_DIR / "env_check_3_typed_address.png"
+            third.write_bytes(base64.b64decode(await env.screenshot_base64()))
+            print(f"Typed address worked: {env.current_url.endswith('/blog')}  (now at {env.current_url})")
+            await env.execute("key", {"text": "ctrl+l"})
+            await env.execute("type", {"text": "http://example.com/\n"})
+            await asyncio.sleep(1.5)
+            blocked = env.current_url.startswith("chrome-error://")
+            print(f"Other websites blocked: {blocked}  (now at {env.current_url})")
         print(f"Session cookie (hp_session): {await env.get_session_cookie()}")
-        print(f"Screenshots: {first}  and  {second}")
+        print(f"Screenshots: {first}  and  {second}" + (f"  and  {third}" if desktop else ""))
+        print("Environment OK.")
     finally:
         await env.close()
 
@@ -81,6 +108,11 @@ def main() -> int:
         default=15,
         help="Maximum number of agent-loop turns.",
     )
+    parser.add_argument(
+        "--desktop",
+        action="store_true",
+        help="Use the real browser window on a virtual screen (needs Xvfb; use the Docker image).",
+    )
     parser.add_argument("--env-check", action="store_true", help="Free: check the browser environment only (no API call).")
     parser.add_argument(
         "--confirm-spend",
@@ -90,7 +122,7 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.env_check:
-        asyncio.run(env_check(args.base_url))
+        asyncio.run(env_check(args.base_url, desktop=args.desktop))
         return 0
 
     if not args.confirm_spend:
@@ -104,6 +136,7 @@ def main() -> int:
                 model=args.model,
                 max_iterations=args.max_iterations,
                 confirm_spend=True,
+                desktop=args.desktop,
             )
         )
     except SpendNotConfirmedError as exc:  # cannot happen from the command line; kept as a second lock
@@ -120,6 +153,8 @@ def main() -> int:
         "task_instruction": transcript.task_instruction,
         "model": transcript.model,
         "session_id": transcript.session_id,
+        "environment": transcript.environment,
+        "final_url": transcript.final_url,
         "iterations_used": transcript.iterations_used,
         "final_text": transcript.final_text,
         "turns": transcript.turns,

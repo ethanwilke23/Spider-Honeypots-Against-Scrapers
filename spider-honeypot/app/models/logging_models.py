@@ -3,6 +3,8 @@ ORM models for request logging.
 
 RequestLog holds one row per HTTP request served. TrapHitEvent holds one
 row per request that matched a honeypot path, linked to its RequestLog row.
+ClientEvent holds one row per event reported by the script on each page
+(view, click, leave).
 Tables are created at start-up with Base.metadata.create_all() (see
 app/main.py); there are no migrations.
 """
@@ -11,7 +13,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Index, String
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -59,6 +61,20 @@ class TrapHitEvent(Base):
     )
 
     request: Mapped[RequestLog] = relationship(back_populates="trap_hit")
+
+
+class ClientEvent(Base):
+    """One row per event reported by the browser (see app/events.py)."""
+
+    __tablename__ = "client_event"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(64), index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+    event_type: Mapped[str] = mapped_column(String(16))
+    path: Mapped[str] = mapped_column(String(512))
+    client_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
 def new_session_id() -> str:

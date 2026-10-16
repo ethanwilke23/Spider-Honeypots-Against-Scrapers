@@ -146,3 +146,10 @@ def test_a_server_problem_stops_the_experiment_without_recording_a_failed_run(tm
     with pytest.raises(runner.ServerError):
         execute(PLAN, runs, manifest_file, 8000, progress=lambda _: None)
     assert not manifest_file.exists()
+
+
+def test_the_ignore_robots_crawler_is_the_baseline_with_one_extra_flag():
+    command = AGENTS["playwright_ignore_robots"].command("http://x")
+    assert AGENTS["playwright_ignore_robots"].module == AGENTS["playwright_baseline"].module
+    assert "--ignore-robots" in command
+    assert "--ignore-robots" not in AGENTS["playwright_baseline"].command("http://x")

@@ -113,7 +113,7 @@ def _logs_command(args: argparse.Namespace) -> int:
 
     if args.action == "status":
         counts = logs.run_async(logs.count_rows())
-        print(f"request_log: {counts['request_log']} rows, trap_hit_event: {counts['trap_hit_event']} rows")
+        print(f"request_log: {counts['request_log']} rows, trap_hit_event: {counts['trap_hit_event']} rows, client_event: {counts['client_event']} rows")
         return 0
 
     if args.action == "export":
@@ -127,7 +127,7 @@ def _logs_command(args: argparse.Namespace) -> int:
         return 0
 
     counts = logs.run_async(logs.count_rows())
-    print(f"The server logs hold {counts['request_log']} request rows and {counts['trap_hit_event']} trap hits.")
+    print(f"The server logs hold {counts['request_log']} request rows, {counts['trap_hit_event']} trap hits and {counts['client_event']} page events.")
     if not args.yes:
         print("Nothing deleted. Export any runs you want to keep first, then add --yes to empty the logs.")
         return 0

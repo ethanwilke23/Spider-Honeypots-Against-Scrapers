@@ -7,6 +7,9 @@ accent colour and system fonts.
 """
 from __future__ import annotations
 
+# Page events (views, clicks, leaving a page) are posted here by the script below.
+EVENTS_PATH = "/_events"
+
 NAV_ITEMS = [
     ("Home", "/"),
     ("Product", "/product"),
@@ -73,6 +76,39 @@ footer {
 """
 
 
+# Small script that reports what a visitor does on a page. It runs in every
+# browser the same way, whether the visitor is a person or an agent.
+_EVENT_SCRIPT = """(function () {
+  var start = Date.now(), maxScroll = 0, moves = 0, keys = 0, left = false;
+  function send(type, data) {
+    try {
+      var body = JSON.stringify({type: type, path: location.pathname, t: Date.now(), data: data || {}});
+      if (navigator.sendBeacon) { navigator.sendBeacon('__EVENTS_PATH__', new Blob([body], {type: 'application/json'})); }
+      else { fetch('__EVENTS_PATH__', {method: 'POST', body: body, headers: {'Content-Type': 'application/json'}, keepalive: true}); }
+    } catch (e) {}
+  }
+  send('view', {width: innerWidth, height: innerHeight, referrer: document.referrer});
+  addEventListener('click', function (e) {
+    var a = e.target.closest ? e.target.closest('a') : null;
+    send('click', {tag: e.target.tagName, href: a ? a.getAttribute('href') : null,
+                   text: a ? (a.textContent || '').trim().slice(0, 80) : null, trusted: e.isTrusted});
+  }, true);
+  addEventListener('scroll', function () {
+    var d = (scrollY + innerHeight) / Math.max(document.documentElement.scrollHeight, 1);
+    if (d > maxScroll) { maxScroll = d; }
+  }, {passive: true});
+  addEventListener('mousemove', function () { moves++; }, {passive: true});
+  addEventListener('keydown', function () { keys++; });
+  function leave() {
+    if (left) { return; }
+    left = true;
+    send('leave', {dwell_ms: Date.now() - start, max_scroll: Math.round(Math.min(maxScroll, 1) * 100) / 100, mouse_moves: moves, keys: keys});
+  }
+  addEventListener('pagehide', leave);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') { leave(); } });
+})();""".replace("__EVENTS_PATH__", EVENTS_PATH)
+
+
 def render_page(title: str, body_html: str, extra_head: str = "") -> str:
     nav_links = "".join(f'<a href="{href}">{label}</a>' for label, href in NAV_ITEMS)
     return f"""<!doctype html>
@@ -100,5 +136,6 @@ def render_page(title: str, body_html: str, extra_head: str = "") -> str:
     <span>Pretoria, South Africa</span>
   </div>
 </footer>
+<script>{_EVENT_SCRIPT}</script>
 </body>
 </html>"""

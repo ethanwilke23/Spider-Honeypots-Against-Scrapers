@@ -8,6 +8,8 @@ Command line for the experiment scheduler.
     python -m experiment check --plan pilot              # finds runs that did not really take place
     python -m experiment logs export --plan pilot        # save each run's server-side records
     python -m experiment logs reset --yes                # empty the server logs
+    python -m experiment freeze                          # draw the main seed once and record the environment
+    python -m experiment plan --name main --seed <frozen seed>
 
 Paid Claude runs need both --execute and --confirm-spend.
 """
@@ -32,7 +34,21 @@ def _agent_list(text: str | None) -> list[str] | None:
     return names
 
 
+def _check_main_seed(name: str, seed: int) -> None:
+    """The plan called "main" must use the seed recorded by `freeze`, so it cannot be tuned afterwards."""
+    from experiment import freeze
+
+    if name != "main":
+        return
+    record = freeze.load_freeze()
+    if record is None:
+        raise ValueError("The main plan needs the frozen seed. Run `python -m experiment freeze` first.")
+    if record["main_seed"] != seed:
+        raise ValueError(f"The main plan must use the frozen seed {record['main_seed']} (you gave {seed}).")
+
+
 def cmd_plan(args: argparse.Namespace) -> int:
+    _check_main_seed(args.name, args.seed)
     names = _agent_list(args.agents) or list(AGENTS)
     repetitions = {n: (args.reps if args.reps else AGENTS[n].default_repetitions) for n in names}
     plan = build_plan(args.name, args.seed, repetitions)
@@ -137,6 +153,32 @@ def cmd_check(args: argparse.Namespace) -> int:
     return 1
 
 
+def cmd_freeze(args: argparse.Namespace) -> int:
+    import json
+
+    from experiment import freeze
+
+    existing = freeze.load_freeze()
+    if existing and not args.force:
+        print(f"Already frozen on {existing['frozen_at']} with main seed {existing['main_seed']}.")
+        print(f"The record is {freeze.FREEZE_PATH}. The seed is drawn only once; use --force only if the protocol allows a redraw.")
+        return 2
+    environment = freeze.collect_environment()
+    problems = freeze.missing_items(environment)
+    if problems:
+        print("NOT FROZEN. Fix these first, then run the command again (no seed has been drawn):")
+        for problem in problems:
+            print(f"  - {problem}")
+        return 2
+    seed = existing["main_seed"] if existing and args.keep_seed else freeze.draw_seed()
+    record = freeze.build_record(seed, environment)
+    print(json.dumps(record, indent=2))
+    freeze.FREEZE_PATH.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    print(f"\nWritten to {freeze.FREEZE_PATH}. Commit it before the main run.")
+    print(f"Create the main plan with:\n  python -m experiment plan --name main --seed {record['main_seed']}")
+    return 0
+
+
 def cmd_logs(args: argparse.Namespace) -> int:
     try:
         return _logs_command(args)
@@ -205,6 +247,11 @@ def main() -> int:
     c.add_argument("--plan", required=True)
     c.add_argument("--apply", action="store_true", help="Mark them as failed so --retry-failed reruns them.")
     c.set_defaults(func=cmd_check)
+
+    f = sub.add_parser("freeze", help="Draw the main seed once and record the environment (docs/freeze_record.json).")
+    f.add_argument("--force", action="store_true", help="Replace an existing freeze record (draws a new seed unless --keep-seed).")
+    f.add_argument("--keep-seed", action="store_true", help="With --force: keep the recorded seed and refresh only the environment.")
+    f.set_defaults(func=cmd_freeze)
 
     g = sub.add_parser("logs", help="Show, export or empty the server logs.")
     g.add_argument("action", choices=["status", "export", "reset"])

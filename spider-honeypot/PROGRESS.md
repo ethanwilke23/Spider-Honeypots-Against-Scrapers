@@ -1,4 +1,6 @@
 # Progress
+
+
 Status key: **Done**, **Partly done**, **Not started**.
 
 | Phase | Description | Status |
@@ -122,7 +124,8 @@ that ignores robots.txt). Details are in section 8.1 of the protocol.
   (the link-graph chain by the crawler that ignores robots.txt, the lures by the
   others), whether the human baseline's false-positive rate is plausible, and the
   trap parameters (chain length, idle timeout, injection surface). Then freeze the
-  protocol.
+  protocol: done in protocol v1.4 (pilot3 results and capped Claude tests recorded);
+  `python -m experiment freeze` writes the seed and environment.
 - Phase 8: run the full experiment, including the paid Claude agent.
 - Phase 9: join server logs to run records, check transcripts for canary tokens
   and compute detection metrics.

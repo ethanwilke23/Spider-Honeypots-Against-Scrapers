@@ -241,7 +241,7 @@ agents/
 docker/claude-desktop/  Dockerfile for the Claude environment
   human_baseline/       Scripted human-like browsing, for the false-positive rate
   shared/task.py        The task text shared by the LLM-based agents
-experiment/             Run planning and the experiment runner
+experiment/             Run planning, the experiment runner and the freeze record (freeze.py)
   plans/                Saved run plans
 docs/PROTOCOL.md       Experiment protocol: design, measures and limitations
 tests/                  Unit tests
@@ -249,10 +249,22 @@ docker-compose.yml      Local Postgres
 PROGRESS.md             Status by phase
 ```
 
+### Freezing before the main run
+
+```bash
+python -m experiment freeze                        # draws the main seed once, records the environment
+python -m experiment plan --name main --seed <the seed it prints>
+```
+
+`freeze` writes `docs/freeze_record.json` (seed, operating system, package versions,
+Chromium build, Ollama model digest, Docker image id, Claude model names, git commit and
+hashes of the protocol and task text). It refuses to run if something cannot be recorded
+or if there are uncommitted changes, and the plan called `main` accepts only the frozen
+seed. Commit the record before the first main run.
+
 ## Status
 
-Phases 0 to 5 are complete, except that the Claude computer-use agent has not yet
-been run. Phase 6 (experiment design) is complete and the protocol is in
+Phases 0 to 5 are complete. The paid Claude agents have only had capped tests so far. Phase 6 (experiment design) is complete and the protocol is in
 `docs/PROTOCOL.md`; it was revised after being checked against the research
 proposal (see section 8.1 of the protocol). The experiment itself (Phases 7 to 11)
 has not started. See

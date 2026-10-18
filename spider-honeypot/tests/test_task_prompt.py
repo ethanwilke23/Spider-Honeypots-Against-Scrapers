@@ -8,7 +8,7 @@ FORBIDDEN_WORDS = ["honeypot", "trap", "canary", "robots", "decoy", "experiment"
 
 
 def test_every_agent_gets_the_same_core_task():
-    assert AGENTS_WITH_TASK == ("crawl4ai", "claude_computer_use")
+    assert AGENTS_WITH_TASK == ("crawl4ai", "claude_computer_use", "claude_text_browser")
     for agent in AGENTS_WITH_TASK:
         assert get_task_instruction(agent).startswith(TASK_CORE)
 

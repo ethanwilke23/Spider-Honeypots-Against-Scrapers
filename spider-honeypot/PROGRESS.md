@@ -70,7 +70,8 @@ Status key: **Done**, **Partly done**, **Not started**.
 - Playwright baseline: done and run against the site.
 - Crawl4AI with a local Ollama model: done and run in both markdown and html
   input modes.
-- Claude computer use: built and tested offline, not yet run. It is protected by
+- Claude text browser (`agents/claude_text_browser/`): added 17 October 2026 so that Claude can be compared with itself across perception (screenshots against page text and link addresses). Offline tests pass; the paid capped test has not been run yet.
+- Claude computer use: built and tested offline; the capped 3-iteration paid test cost about $0.05. It is protected by
   an explicit spending flag, and real runs are planned for Phase 8 to avoid API
   cost until results are being recorded. It now controls a real Chromium window
   (tab bar, address bar) on a virtual screen (Xvfb) inside a Docker container,
@@ -100,7 +101,7 @@ Status key: **Done**, **Partly done**, **Not started**.
   al.) supports the pattern but gives no numbers, so the parameter values are
   chosen, not measured, and are stated as such.
 - A written protocol (`docs/PROTOCOL.md`): conditions, run matrix and
-  repetitions (220 runs with the extra configuration), ordering, the procedure for each run, exact definitions
+  repetitions (240 runs with the extra configurations), ordering, the procedure for each run, exact definitions
   of the four measures plus canary compliance, the analysis plan and known
   limitations. It is frozen after the pilot; later changes are listed in its
   amendments section.

@@ -39,7 +39,8 @@ Agents run against it:
 | Playwright baseline | A mechanical crawler that follows links and obeys robots.txt. It is the control. |
 | Playwright, ignoring robots.txt | The same crawler with `--ignore-robots`: a traditional scraper that does not honour robots.txt, and the only mechanical agent that can reach the link-graph chain. |
 | Crawl4AI | An open-source scraper using a local model served by Ollama (no API cost). |
-| Claude computer use | Claude controlling a real browser window (tab bar and address bar) on a virtual screen inside Docker, through screenshots. Built but not yet run, because it uses the paid API. |
+| Claude computer use | Claude controlling a real browser window (tab bar and address bar) on a virtual screen inside Docker, through screenshots. Uses the paid API. |
+| Claude text browser | The same Claude model reading each page as text plus a numbered list of links (no screenshots), in a headless browser on your computer. Differs from the line above only in perception. Uses the paid API. |
 
 A scripted browser session is used to measure false positives. It browses like a
 person would (visible links only, varied pauses and page counts, now and then
@@ -150,6 +151,12 @@ The older single-page environment (a headless page with no address bar) is still
 available without Docker as `python -m agents.claude_computer_use.run --env-check`,
 for debugging.
 
+```
+# Claude text browser runs on your computer (needs `pip install anthropic`).
+python -m agents.claude_text_browser.run --env-check                        # free: shows the page text Claude would be given
+python -m agents.claude_text_browser.run --confirm-spend --max-iterations 3   # PAID; needs ANTHROPIC_API_KEY
+```
+
 The Playwright and Claude runs record the `hp_session` cookie, so they can be
 joined to the server logs by session id. Crawl4AI cannot read the cookie, so its
 runs are matched to the logs by time window.
@@ -230,6 +237,7 @@ agents/
     x11.py              Screen capture, mouse and keyboard through the X server
     docker_run.py       Runs the agent in the Docker image from the host
     environment.py      Older headless-page environment, kept for debugging
+  claude_text_browser/  Same model, text view of pages (browser.py, agent_loop.py, run.py)
 docker/claude-desktop/  Dockerfile for the Claude environment
   human_baseline/       Scripted human-like browsing, for the false-positive rate
   shared/task.py        The task text shared by the LLM-based agents

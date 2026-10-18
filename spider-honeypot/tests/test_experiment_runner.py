@@ -51,9 +51,11 @@ def test_seed_is_passed_only_to_agents_that_use_one():
     assert "--seed" not in AGENTS["playwright_baseline"].command("http://x", 123)
 
 
-def test_only_the_claude_agent_costs_money_and_it_confirms_spend_itself():
-    assert [name for name, c in AGENTS.items() if c.costs_money] == ["claude_computer_use"]
-    assert "--confirm-spend" in AGENTS["claude_computer_use"].extra_args
+def test_only_the_claude_agents_cost_money_and_they_confirm_spend_themselves():
+    paid = [name for name, c in AGENTS.items() if c.costs_money]
+    assert sorted(paid) == ["claude_computer_use", "claude_text_browser"]
+    for name in paid:
+        assert "--confirm-spend" in AGENTS[name].extra_args
 
 
 def test_parse_record_path():

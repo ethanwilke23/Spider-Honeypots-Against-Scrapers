@@ -14,5 +14,6 @@ SQLAlchemy==2.0.52
 starlette==1.6.0
 uvicorn==0.52.4
 # The Claude computer-use agent runs in Docker (docker/claude-desktop/), where
-# anthropic is installed. It is needed here only to run the agent without Docker:
-# anthropic
+# anthropic is installed. The Claude text-browser agent runs on this computer and
+# needs it here (it is imported only when a paid run is confirmed):
+anthropic

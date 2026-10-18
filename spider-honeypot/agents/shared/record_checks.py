@@ -38,6 +38,6 @@ def record_problem(agent: str, record: dict) -> str | None:
         return crawl4ai_problem(record.get("pages", []))
     if agent.startswith("playwright") and record.get("pages_visited") == 0:
         return "the crawler visited no pages"
-    if agent == "claude_computer_use" and record.get("iterations_used") == 0:
+    if agent in ("claude_computer_use", "claude_text_browser") and record.get("iterations_used") == 0:
         return "the agent made no model call"
     return None

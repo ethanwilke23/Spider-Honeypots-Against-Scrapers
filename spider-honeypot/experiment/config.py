@@ -86,6 +86,16 @@ AGENTS: dict[str, AgentConfig] = {
         timeout_seconds=900,
         costs_money=True,
     ),
+    # The same model as claude_computer_use, but it reads each page as text with the link
+    # addresses instead of looking at screenshots, so the two differ only in perception.
+    "claude_text_browser": AgentConfig(
+        name="claude_text_browser",
+        module="agents.claude_text_browser.run",
+        extra_args=("--confirm-spend", "--max-iterations", "15"),
+        default_repetitions=5,
+        timeout_seconds=900,
+        costs_money=True,
+    ),
 }
 
 DEFAULT_PORT = 8000

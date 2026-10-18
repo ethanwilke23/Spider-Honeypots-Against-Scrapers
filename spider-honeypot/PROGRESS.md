@@ -1,7 +1,4 @@
 # Progress
-
-Last updated: 15 October 2026.
-
 Status key: **Done**, **Partly done**, **Not started**.
 
 | Phase | Description | Status |
@@ -154,6 +151,12 @@ that ignores robots.txt). Details are in section 8.1 of the protocol.
   future work.
 - The human baseline does not model time of day, which has no effect on a
   local testbed.
+- Crawl4AI refuses to fetch pages when memory use is above 95% and still exits
+  normally. This hit 7 of 16 pilot runs. The guard is now switched off, a run with
+  unfetched pages is reported as invalid and rerun (`experiment check`), and the
+  html mode has the same page limit as the markdown mode (it had 5).
+- Crawl4AI's link depth limit of 4 means it can reach at most pages 1 to 3 of the
+  link-graph chain.
 - Crawl4AI sometimes silently drops a page from its results when the returned
   URL differs from the queued URL. The server's request log is treated as the
   source of truth for which pages were visited.

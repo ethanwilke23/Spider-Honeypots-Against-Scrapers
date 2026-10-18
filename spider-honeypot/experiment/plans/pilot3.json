@@ -1,0 +1,160 @@
+{
+  "name": "pilot3",
+  "seed": 700,
+  "conditions": [
+    "semantic",
+    "prompt_injection",
+    "link_graph",
+    "none"
+  ],
+  "repetitions": {
+    "crawl4ai_markdown": 2,
+    "crawl4ai_html": 2
+  },
+  "runs": [
+    {
+      "order": 1,
+      "block": 1,
+      "label": "crawl4ai_html__prompt_injection__r01",
+      "agent": "crawl4ai_html",
+      "condition": "prompt_injection",
+      "repetition": 1,
+      "run_seed": 2610075760
+    },
+    {
+      "order": 2,
+      "block": 1,
+      "label": "crawl4ai_html__none__r01",
+      "agent": "crawl4ai_html",
+      "condition": "none",
+      "repetition": 1,
+      "run_seed": 137324795
+    },
+    {
+      "order": 3,
+      "block": 1,
+      "label": "crawl4ai_html__semantic__r01",
+      "agent": "crawl4ai_html",
+      "condition": "semantic",
+      "repetition": 1,
+      "run_seed": 3556450738
+    },
+    {
+      "order": 4,
+      "block": 1,
+      "label": "crawl4ai_markdown__none__r01",
+      "agent": "crawl4ai_markdown",
+      "condition": "none",
+      "repetition": 1,
+      "run_seed": 1802022373
+    },
+    {
+      "order": 5,
+      "block": 1,
+      "label": "crawl4ai_markdown__prompt_injection__r01",
+      "agent": "crawl4ai_markdown",
+      "condition": "prompt_injection",
+      "repetition": 1,
+      "run_seed": 3735256283
+    },
+    {
+      "order": 6,
+      "block": 1,
+      "label": "crawl4ai_markdown__link_graph__r01",
+      "agent": "crawl4ai_markdown",
+      "condition": "link_graph",
+      "repetition": 1,
+      "run_seed": 1967678407
+    },
+    {
+      "order": 7,
+      "block": 1,
+      "label": "crawl4ai_markdown__semantic__r01",
+      "agent": "crawl4ai_markdown",
+      "condition": "semantic",
+      "repetition": 1,
+      "run_seed": 820524184
+    },
+    {
+      "order": 8,
+      "block": 1,
+      "label": "crawl4ai_html__link_graph__r01",
+      "agent": "crawl4ai_html",
+      "condition": "link_graph",
+      "repetition": 1,
+      "run_seed": 2276365433
+    },
+    {
+      "order": 9,
+      "block": 2,
+      "label": "crawl4ai_markdown__semantic__r02",
+      "agent": "crawl4ai_markdown",
+      "condition": "semantic",
+      "repetition": 2,
+      "run_seed": 2952383255
+    },
+    {
+      "order": 10,
+      "block": 2,
+      "label": "crawl4ai_markdown__none__r02",
+      "agent": "crawl4ai_markdown",
+      "condition": "none",
+      "repetition": 2,
+      "run_seed": 1908290521
+    },
+    {
+      "order": 11,
+      "block": 2,
+      "label": "crawl4ai_markdown__link_graph__r02",
+      "agent": "crawl4ai_markdown",
+      "condition": "link_graph",
+      "repetition": 2,
+      "run_seed": 2600810301
+    },
+    {
+      "order": 12,
+      "block": 2,
+      "label": "crawl4ai_markdown__prompt_injection__r02",
+      "agent": "crawl4ai_markdown",
+      "condition": "prompt_injection",
+      "repetition": 2,
+      "run_seed": 2007834730
+    },
+    {
+      "order": 13,
+      "block": 2,
+      "label": "crawl4ai_html__none__r02",
+      "agent": "crawl4ai_html",
+      "condition": "none",
+      "repetition": 2,
+      "run_seed": 2313198811
+    },
+    {
+      "order": 14,
+      "block": 2,
+      "label": "crawl4ai_html__prompt_injection__r02",
+      "agent": "crawl4ai_html",
+      "condition": "prompt_injection",
+      "repetition": 2,
+      "run_seed": 505119960
+    },
+    {
+      "order": 15,
+      "block": 2,
+      "label": "crawl4ai_html__semantic__r02",
+      "agent": "crawl4ai_html",
+      "condition": "semantic",
+      "repetition": 2,
+      "run_seed": 2239759019
+    },
+    {
+      "order": 16,
+      "block": 2,
+      "label": "crawl4ai_html__link_graph__r02",
+      "agent": "crawl4ai_html",
+      "condition": "link_graph",
+      "repetition": 2,
+      "run_seed": 865718950
+    }
+  ]
+}

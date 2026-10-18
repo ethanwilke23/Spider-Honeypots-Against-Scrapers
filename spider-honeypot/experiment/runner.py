@@ -27,6 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Iterator
 
+from agents.shared.record_checks import record_problem
 from experiment.config import AGENTS, PROJECT_ROOT, RESULTS_DIR
 
 RECORD_LINE = re.compile(r"Run record written to (.+)")
@@ -160,6 +161,15 @@ def running_server(condition: str, port: int, log_path: Path) -> Iterator[str]:
             time.sleep(1)  # let the port be released before the next run
 
 
+def _record_problem(agent: str, record_path: Path) -> str | None:
+    """Why a saved record is not a real run (see agents/shared/record_checks.py), or None."""
+    try:
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+    except ValueError:
+        return "the record is not valid JSON"
+    return record_problem(agent, record)
+
+
 def run_one(run: dict, out_dir: Path, port: int) -> dict:
     """
     Do a single run and return its manifest entry. An agent failure is recorded in the
@@ -216,6 +226,10 @@ def run_one(run: dict, out_dir: Path, port: int) -> dict:
         except ValueError:
             pass
         entry["status"] = "done"
+        problem = _record_problem(run["agent"], destination)
+        if problem:
+            entry["status"] = "failed"
+            entry["error"] = f"Invalid run (it will be rerun with --retry-failed): {problem}."
     elif entry["error"] is None:
         entry["error"] = f"Agent exited with code {entry['returncode']} or wrote no run record. Output ended: " + output[-OUTPUT_TAIL_CHARS:]
     return entry

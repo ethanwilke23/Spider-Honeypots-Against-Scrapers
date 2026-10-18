@@ -124,7 +124,7 @@ python -m agents.playwright_baseline.run --ignore-robots
 # Crawl4AI (Ollama must be running and the model pulled: ollama pull llama3.2)
 crawl4ai-setup                   # once
 python -m agents.crawl4ai_scraper.run --input-format markdown
-python -m agents.crawl4ai_scraper.run --input-format html --max-pages 5
+python -m agents.crawl4ai_scraper.run --input-format html
 
 # Synthetic human-behaviour baseline (a different seed gives a different session;
 # --time-scale 0.2 makes the pauses five times shorter)
@@ -176,6 +176,11 @@ python -m experiment run --plan pilot --execute
 # Progress, and picking up again after an interruption (finished runs are skipped)
 python -m experiment status --plan pilot
 python -m experiment run --plan pilot --execute
+
+# Look for runs that finished but did not really take place (for example a crawl that
+# fetched nothing), mark them as failed and rerun them
+python -m experiment check --plan pilot --apply
+python -m experiment run --plan pilot --execute --retry-failed
 ```
 
 The server logs build up across runs, and the scheduler does not touch them. After

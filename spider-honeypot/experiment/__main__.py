@@ -5,6 +5,7 @@ Command line for the experiment scheduler.
     python -m experiment run --plan pilot                # shows what would run
     python -m experiment run --plan pilot --execute      # runs the free agents
     python -m experiment status --plan pilot
+    python -m experiment check --plan pilot              # finds runs that did not really take place
     python -m experiment logs export --plan pilot        # save each run's server-side records
     python -m experiment logs reset --yes                # empty the server logs
 
@@ -100,6 +101,42 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_check(args: argparse.Namespace) -> int:
+    """Look through the records of finished runs for runs that did not really take place."""
+    import json
+
+    from agents.shared.record_checks import record_problem
+
+    plan = load_plan(plan_path(args.plan))
+    manifest_file = manifest_path(plan["name"])
+    manifest = load_manifest(manifest_file, plan["name"])
+    out_dir = manifest_file.parent
+    problems = []
+    for entry in sorted(manifest["runs"].values(), key=lambda e: e["order"]):
+        if entry["status"] != "done" or not entry.get("record"):
+            continue
+        record = json.loads((out_dir / entry["record"]).read_text(encoding="utf-8"))
+        problem = record_problem(entry["agent"], record)
+        if problem:
+            problems.append((entry, problem))
+    if not problems:
+        print("All finished runs look like real runs.")
+        return 0
+    for entry, problem in problems:
+        print(f"  {entry['label']}: {problem}")
+        if args.apply:
+            entry["status"] = "failed"
+            entry["error"] = f"Invalid run (it will be rerun with --retry-failed): {problem}."
+    if args.apply:
+        from experiment.runner import save_manifest
+
+        save_manifest(manifest_file, manifest)
+        print(f"{len(problems)} run(s) marked as failed. Rerun them with: python -m experiment run --plan {plan['name']} --execute --retry-failed")
+    else:
+        print(f"{len(problems)} run(s) are not real runs. Add --apply to mark them as failed so they can be rerun.")
+    return 1
+
+
 def cmd_logs(args: argparse.Namespace) -> int:
     try:
         return _logs_command(args)
@@ -123,6 +160,8 @@ def _logs_command(args: argparse.Namespace) -> int:
         print(f"Exported {len(rows)} run(s) to agent_runs/experiment/{args.plan}/server_records/ (summary.csv included).")
         for row in rows:
             flag = f"  UNEXPECTED trap hits: {row['unexpected_trap_hits']}" if row["unexpected_trap_hits"] else ""
+            if row["requests"] == 0:
+                flag += "  NO REQUESTS RECORDED: not a real run"
             print(f"  {row['label']}: {row['requests']} requests, {row['trap_hits']} trap hit(s){flag}")
         return 0
 
@@ -161,6 +200,11 @@ def main() -> int:
     s = sub.add_parser("status", help="Show progress for a plan.")
     s.add_argument("--plan", required=True)
     s.set_defaults(func=cmd_status)
+
+    c = sub.add_parser("check", help="Find finished runs that did not really take place (for example a crawl that fetched nothing).")
+    c.add_argument("--plan", required=True)
+    c.add_argument("--apply", action="store_true", help="Mark them as failed so --retry-failed reruns them.")
+    c.set_defaults(func=cmd_check)
 
     g = sub.add_parser("logs", help="Show, export or empty the server logs.")
     g.add_argument("action", choices=["status", "export", "reset"])

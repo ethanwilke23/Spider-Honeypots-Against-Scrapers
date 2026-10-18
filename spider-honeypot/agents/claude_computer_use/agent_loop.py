@@ -26,7 +26,8 @@ from dataclasses import dataclass, field
 from agents.claude_computer_use.environment import ComputerEnvironment
 from agents.shared.task import get_task_instruction
 
-DEFAULT_MODEL = "claude-sonnet-5"
+# Sonnet 5.5
+DEFAULT_MODEL = "claude-sonnet-5-5"
 
 # The task wording is shared with the other agents (agents/shared/task.py).
 DEFAULT_TASK_INSTRUCTION = get_task_instruction("claude_computer_use")

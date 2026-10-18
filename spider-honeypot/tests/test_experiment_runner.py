@@ -153,3 +153,12 @@ def test_the_ignore_robots_crawler_is_the_baseline_with_one_extra_flag():
     assert AGENTS["playwright_ignore_robots"].module == AGENTS["playwright_baseline"].module
     assert "--ignore-robots" in command
     assert "--ignore-robots" not in AGENTS["playwright_baseline"].command("http://x")
+
+
+def test_a_run_whose_record_shows_nothing_happened_is_marked_failed(tmp_path, monkeypatch, fake_server):
+    script = FAKE_AGENT.replace('{"session_id": "abc123"}', '{"session_id": "abc123", "pages_visited": 0}')
+    _use_fake_agent(monkeypatch, tmp_path, script)
+    run = next(r for r in PLAN["runs"] if r["agent"] == "playwright_baseline")
+    entry = runner.run_one(run, tmp_path / "results", 8000)
+    assert entry["status"] == "failed"
+    assert "Invalid run" in entry["error"] and "no pages" in entry["error"]

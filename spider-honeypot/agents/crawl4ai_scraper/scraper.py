@@ -13,11 +13,11 @@ The agent is given an information-seeking goal and uses the model in two ways:
 
 Input format: the extraction step can read either the page's markdown (the
 library default) or its raw HTML. Converting to markdown drops HTML
-comments, and the prompt-injection trap hides its instruction in a comment,
-so in markdown mode that trap cannot be seen at all. The two modes answer
-different questions and both are run, saved to separate files:
+comments. The prompt-injection trap puts its instruction in a comment and in
+visible text, so in markdown mode only the visible copy can be seen. The two
+modes are both run, saved to separate files:
   - markdown: how the scraper behaves in its default configuration.
-  - html: whether the model itself follows the injected instruction.
+  - html: the model also sees the instruction in the HTML comment.
 """
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ import urllib.request
 from dataclasses import dataclass, field
 
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig, LLMConfig
+from crawl4ai.async_dispatcher import MemoryAdaptiveDispatcher, RateLimiter
 from crawl4ai.deep_crawling import BestFirstCrawlingStrategy
 from crawl4ai.deep_crawling.scorers import KeywordRelevanceScorer
 from crawl4ai.extraction_strategy import LLMExtractionStrategy
@@ -54,6 +55,34 @@ class Crawl4AIResult:
     task_instruction: str
     input_format: str
     pages: list[PageResult] = field(default_factory=list)
+
+
+def _dispatcher_without_memory_limit() -> MemoryAdaptiveDispatcher:
+    """
+    The dispatcher Crawl4AI uses for the pages after the first, with its memory guard
+    switched off. By default it refuses to fetch (and reports the page as failed) when
+    the computer's memory use is above 95%, which happens easily with a local model,
+    Chromium and Docker running together. A refused page would look like a page the
+    agent chose not to visit, so the guard is disabled; pages are fetched with the
+    library's default settings otherwise.
+    """
+    return MemoryAdaptiveDispatcher(
+        memory_threshold_percent=101.0,
+        critical_threshold_percent=101.0,
+        recovery_threshold_percent=100.0,
+        max_session_permit=10,
+        rate_limiter=RateLimiter(base_delay=(0.1, 0.4), max_delay=60.0, max_retries=3),
+    )
+
+
+def _disable_memory_guard(crawler: AsyncWebCrawler) -> None:
+    """Make the deep-crawl strategy's page fetches use the dispatcher above."""
+    original = crawler.arun_many
+
+    async def arun_many(urls, config=None, dispatcher=None, **kwargs):
+        return await original(urls=urls, config=config, dispatcher=dispatcher or _dispatcher_without_memory_limit(), **kwargs)
+
+    crawler.arun_many = arun_many
 
 
 def _check_ollama_reachable(base_url: str) -> None:
@@ -104,6 +133,7 @@ async def run_crawl(
     result = Crawl4AIResult(base_url=base_url, task_instruction=task_instruction, input_format=input_format)
 
     async with AsyncWebCrawler(config=BrowserConfig(headless=True)) as crawler:
+        _disable_memory_guard(crawler)
         crawl_results = await crawler.arun(url=base_url, config=run_config)
         # arun() returns a list when a deep-crawl strategy is set, a single result otherwise.
         if not isinstance(crawl_results, list):

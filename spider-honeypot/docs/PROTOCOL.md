@@ -3,8 +3,9 @@
 Spider honeypots against LLM-driven scrapers. COS 700, University of Pretoria.
 Student U23577674. Supervisor: Prof. Jan Eloff.
 
-Version 1.1 (draft), 15 October 2026. Version 1.0 was revised after it was
-checked against the research proposal (section 8.1 lists what changed and why).
+Version 1.2 (draft). Version 1.1 revised version 1.0 after it
+was checked against the research proposal (section 8.1 lists what changed and
+why), and version 1.2 revises it after the first full pilot (section 9).
 This protocol is fixed before the pilot (Phase 7) and frozen after it. Changes made after the pilot must be listed in
 the amendments section at the end, with a date, so that the analysis in Phase 9
 is not decided after the results are seen.
@@ -47,8 +48,8 @@ inactive variant returns 404 and is not logged as a trap hit.
 | `playwright_baseline` | Breadth-first crawl of every link, obeys robots.txt, no task | Mechanical control |
 | `playwright_ignore_robots` | The same crawler with robots.txt ignored | Traditional scraper that does not honour robots.txt; the only mechanical agent that can reach the link-graph chain |
 | `crawl4ai_markdown` | Crawl4AI with local Ollama model `llama3.2`, model reads page markdown | Open-source LLM scraper |
-| `crawl4ai_html` | As above, model reads raw HTML, at most 5 pages | Open-source LLM scraper (sees HTML comments) |
-| `claude_computer_use` | Claude controlling a real Chromium window with a tab bar and address bar, through screenshots of the whole screen, at most 15 iterations | Commercial LLM agent |
+| `crawl4ai_html` | As above, model reads raw HTML (same 30-page, depth-4 limits) | Open-source LLM scraper (sees HTML comments) |
+| `claude_computer_use` | Claude Sonnet 5.5 (`claude-sonnet-5-5`) controlling a real Chromium window with a tab bar and address bar, through screenshots of the whole screen, at most 15 iterations | Commercial LLM agent |
 | `human_baseline` | Scripted browsing that follows visible links only, with seeded random pauses and page counts | Source of the false-positive rate |
 
 The Claude agent runs inside a Docker container (`docker/claude-desktop/`). The
@@ -155,9 +156,17 @@ Pilot results are not part of the final data.
 
 ### 5.5 Exclusions and reruns
 
-A run is complete if the agent exited normally and wrote a record. A failed run
-(crash, timeout, Ollama unavailable) is recorded as failed in the manifest and
-rerun with `--retry-failed`; its result is not used. Complete runs are never
+A run is complete if the agent exited normally, wrote a record, and the record
+shows that the run took place. The last condition is checked by the scheduler
+after every run, and for finished runs by `python -m experiment check --plan
+<plan>` (code in `agents/shared/record_checks.py`): a Crawl4AI run in which any
+page was not fetched because Crawl4AI judged the computer to be short of memory,
+or whose start page failed, is not a real run, and neither is a crawl that
+visited no pages. The export also flags any run for which the server logged no
+requests. A failed or invalid run (crash, timeout, Ollama unavailable, nothing
+fetched) is recorded as failed in the manifest and rerun with `--retry-failed`;
+its result is not used. The rule depends only on whether the agent ran, never on
+what it found. Complete runs are never
 discarded or rerun because of what they showed. A Claude run that stops at the
 iteration cap is complete and counts as it stands.
 
@@ -294,9 +303,11 @@ zero by construction, now carries information.
 - **Route to the trap.** A trap hit by typing the address (possible for Claude)
   differs from a hit by following a link. Both count as a hit; the page events
   tell them apart.
-- **Caps limit what is observed.** Crawl4AI is capped at 30 pages (5 in html
-  mode) and link depth 4; Claude at 15 iterations. Results hold within those
-  caps only.
+- **Caps limit what is observed.** Crawl4AI is capped at 30 pages and link depth
+  4 (both modes); Claude at 15 iterations. Results hold within those caps only.
+  The depth cap has a consequence for the link-graph trap: the chain is entered
+  at depth 2 (home, blog, archive page 1), so Crawl4AI can reach at most pages 1
+  to 3 of the 14 and "trap depth" for it cannot exceed 3.
 - **Deterministic baseline.** The Playwright baseline visits the same pages in
   every run, so its repetitions confirm repeatability and add no variation.
 - **Synthetic human baseline.** It cannot show how real visitors behave, and its
@@ -315,16 +326,48 @@ zero by construction, now carries information.
 - **Tokens could be recognised.** The canary format contains the word HONEYTOK,
   which a capable model might recognise as a test marker. The effect, if any, is
   not measured.
+- **Crawl4AI memory guard.** By default Crawl4AI refuses to fetch pages when the
+  computer's memory use is above 95% and reports them as failed, which on a
+  computer running Ollama, Chromium and Docker Desktop together happened in 7 of
+  16 pilot runs. The guard is switched off in `agents/crawl4ai_scraper/scraper.py`.
+  The experiment should still be run with other heavy programs closed, and Docker
+  Desktop is only needed for the Claude runs.
 - **Crawl4AI.** It sometimes drops a page from its results when the returned URL
   differs from the queued one, and it does not expose browser cookies. Its pages
   are taken from the server log and matched to its run by time window, not by
   session id.
 - **Page events depend on scripting.** They come from a script in the page, so a
-  client that does not run scripts produces no events. The HTTP log is the ground
+  client that does not run scripts produces no events (Crawl4AI's browser, the
+  Playwright crawlers and the human baseline all run it). The HTTP log is the ground
   truth; events are supporting evidence only.
 - **Single machine, small samples.** All runs use one computer and one site, and
   repetitions per cell are small.
 
 ## 9. Amendments
 
-None yet. Entries are added after the pilot as: date, what changed, why.
+Entries are: date, what changed, why.
+
+**16 October 2026, after the first full pilot (plan `pilot2`, 40 runs, seed 700).**
+All 40 runs exited normally. Server records showed the Playwright crawlers and the
+human baseline behaving as designed (obeying crawler: 2/2 semantic, 2/2 prompt
+injection, 0/2 link graph; ignoring crawler: 2/2 in all three, with the whole 14-page
+chain walked; human baseline: 0 hits in 8 runs; no hits in any control run and no
+unexpected hits). Crawl4AI results were affected by two faults, so its pilot data
+are discarded and the Crawl4AI runs are repeated:
+
+1. *Fetches refused for lack of memory.* 7 of 16 Crawl4AI runs contained pages
+   that Crawl4AI did not fetch because its scheduler judged memory use to be above
+   95% ("Requeued due to critical memory pressure"); 5 of them made no requests
+   at all, yet exited normally and would have counted as misses. Changes:
+   the memory guard is switched off for page fetches; a Crawl4AI run with any such
+   page, or a failed start page, exits with an error; the scheduler and
+   `experiment check` apply the same test to the records; the export flags runs with
+   no requests (sections 5.5 and 8.2).
+2. *Page cap in html mode.* `crawl4ai_html` was limited to 5 pages, which the
+   crawler spent on the homepage and its four links, so it could not reach the blog
+   posts that hold the trap links, and its misses would have measured the cap rather
+   than the trap. The html mode now has the same limits as markdown mode (30 pages,
+   depth 4), so the two modes differ only in what the model reads.
+
+The human baseline's false-positive rate in the pilot was 0 of 6 honeypot runs
+(exact 95% upper bound 46%). Pilot results are not part of the final data.

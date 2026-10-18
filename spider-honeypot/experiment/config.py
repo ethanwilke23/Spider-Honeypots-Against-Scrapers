@@ -64,7 +64,7 @@ AGENTS: dict[str, AgentConfig] = {
     "crawl4ai_html": AgentConfig(
         name="crawl4ai_html",
         module="agents.crawl4ai_scraper.run",
-        extra_args=("--input-format", "html", "--max-pages", "5"),
+        extra_args=("--input-format", "html"),
         default_repetitions=10,
         timeout_seconds=1800,
     ),

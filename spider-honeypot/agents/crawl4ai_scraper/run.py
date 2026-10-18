@@ -27,6 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from agents.crawl4ai_scraper.scraper import DEFAULT_OLLAMA_BASE_URL, run_crawl
+from agents.shared.record_checks import crawl4ai_problem
 
 OUTPUT_DIR = Path(__file__).resolve().parents[2] / "agent_runs" / "crawl4ai"
 
@@ -80,12 +81,17 @@ def main() -> None:
     }
     out_path.write_text(json.dumps(record, indent=2))
 
+    problem = crawl4ai_problem(record["pages"])
     print(f"Visited {len(result.pages)} pages (input_format={result.input_format}).")
     for p in result.pages:
         line = f"  {p.url} (success={p.success})"
         if not p.success and p.error_message:
             line += f"\n    error: {p.error_message}"
         print(line)
+    if problem:
+        # No "Run record written" line, so the scheduler marks the run as failed and it can be rerun.
+        print(f"INVALID RUN: {problem}. The record was saved to {out_path} for inspection.")
+        raise SystemExit(3)
     print(f"Run record written to {out_path}")
 
 

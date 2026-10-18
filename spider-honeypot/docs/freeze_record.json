@@ -1,0 +1,48 @@
+{
+  "frozen_at": "2026-10-18T10:42:12Z",
+  "main_seed": 707150,
+  "environment": {
+    "operating_system": "Windows-11-10.0.26300-SP0",
+    "python": "3.13.14",
+    "packages": {
+      "playwright": "1.62.0",
+      "Crawl4AI": "0.9.4",
+      "anthropic": "1.15.0",
+      "fastapi": "0.141.1",
+      "uvicorn": "0.52.4",
+      "SQLAlchemy": "2.0.52",
+      "asyncpg": "0.31.0",
+      "httpx": "0.28.1",
+      "pydantic": "2.13.5",
+      "Faker": "40.37.0"
+    },
+    "chromium": "151.0.7922.34",
+    "ollama": {
+      "model": "llama3.2",
+      "digest": "a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72",
+      "size_bytes": 2019393189,
+      "parameter_size": "3.2B",
+      "quantization": "Q4_K_M",
+      "server_version": "0.40.6",
+      "tag": "llama3.2:latest"
+    },
+    "docker_version": "Docker version 27.4.0, build bde2b89",
+    "docker_image": {
+      "name": "spider-honeypot-claude-desktop",
+      "id": "sha256:380a2bdfae4c0aab3cd4e5d6216e46c964c9e84c38cd71b9a88ddd7e3592d41c"
+    },
+    "claude_models": {
+      "claude_computer_use": "claude-sonnet-5-5",
+      "claude_text_browser": "claude-sonnet-5-5"
+    },
+    "git_commit": "ca6383011130da682613ef5f9d1d22238a88dbaf",
+    "git_uncommitted_changes": false,
+    "protocol_version": "1.4",
+    "protocol_sha256": "17bb012aaca047c0868f6cb1ae5eff802adb14d70c7fb270a25e66aedce9efb8",
+    "task_text_sha256": {
+      "crawl4ai": "f55e8b10099a9eae4630b904139b6490592713636ff5dd82ab6e93e352b0c0ab",
+      "claude_computer_use": "d81e3f85f65f8ef917c2c3aa59ab4f98c894a623794e0a47fdd33134e9e1732d",
+      "claude_text_browser": "85fb705232e52c958315556232b4d7b5d9edeb6a45ba655d99771c317a9866e1"
+    }
+  }
+}

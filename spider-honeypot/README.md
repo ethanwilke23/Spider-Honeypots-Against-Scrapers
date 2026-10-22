@@ -210,6 +210,23 @@ given, and nothing is run at all without `--execute`. Results go to
 start and finish time and session id of every run, the agent records, the
 agent and server output of each run, and the exported server records. The plan files are committed.
 
+### Supplementary run (protocol amendment 1.8)
+
+After the main experiment it was found that Crawl4AI's output could not show whether the instruction on the
+prompt-injection page was obeyed (the model returned records, not a summary). The supplementary run repeats only
+the Crawl4AI prompt-injection runs with a one-field `summary` schema (`--summary`). Its agents,
+`crawl4ai_markdown_summary` and `crawl4ai_html_summary`, are not part of the main plan. See `docs/PROTOCOL.md`, version 1.8.
+
+```bash
+python -m experiment plan --name crawl4ai_summary_check --seed 1801 --agents crawl4ai_markdown_summary,crawl4ai_html_summary --conditions prompt_injection --reps 2   # check runs, discarded
+python -m experiment plan --name crawl4ai_summary --seed 1800 --agents crawl4ai_markdown_summary,crawl4ai_html_summary --conditions prompt_injection             # the 20 runs
+python -m experiment run --plan crawl4ai_summary --execute
+python -m experiment check --plan crawl4ai_summary
+python -m experiment logs export --plan crawl4ai_summary
+python supplementary_summary.py --plan crawl4ai_summary             # writes the coding sheet
+python supplementary_summary.py --plan crawl4ai_summary --results   # after hand-coding
+```
+
 ## Repository layout
 
 ```

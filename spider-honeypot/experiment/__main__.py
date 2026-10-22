@@ -11,6 +11,7 @@ Command line for the experiment scheduler.
     python -m experiment analyse --plan main             # tables, charts and the hand-coding sheet
     python -m experiment freeze                          # draw the main seed once and record the environment
     python -m experiment plan --name main --seed <frozen seed>
+    python -m experiment plan --name crawl4ai_summary --seed 1800 --agents crawl4ai_markdown_summary,crawl4ai_html_summary --conditions prompt_injection
 
 Paid Claude runs need both --execute and --confirm-spend.
 """
@@ -20,7 +21,7 @@ import argparse
 import sys
 from collections import Counter
 
-from experiment.config import AGENTS, DEFAULT_PORT, DEFAULT_SEED
+from experiment.config import AGENTS, CONDITIONS, DEFAULT_PORT, DEFAULT_SEED, agent_config, known_agents
 from experiment.plan import build_plan, load_plan, plan_path, save_plan
 from experiment.runner import ServerError, execute, load_manifest, manifest_path, select_runs
 
@@ -29,9 +30,19 @@ def _agent_list(text: str | None) -> list[str] | None:
     if not text:
         return None
     names = [n.strip() for n in text.split(",") if n.strip()]
-    unknown = [n for n in names if n not in AGENTS]
+    unknown = [n for n in names if n not in known_agents()]
     if unknown:
-        raise SystemExit(f"Unknown agent(s): {', '.join(unknown)}. Choose from: {', '.join(AGENTS)}")
+        raise SystemExit(f"Unknown agent(s): {', '.join(unknown)}. Choose from: {', '.join(known_agents())}")
+    return names
+
+
+def _condition_list(text: str | None) -> tuple[str, ...]:
+    if not text:
+        return CONDITIONS
+    names = tuple(n.strip() for n in text.split(",") if n.strip())
+    unknown = [n for n in names if n not in CONDITIONS]
+    if unknown:
+        raise SystemExit(f"Unknown condition(s): {', '.join(unknown)}. Choose from: {', '.join(CONDITIONS)}")
     return names
 
 
@@ -51,8 +62,8 @@ def _check_main_seed(name: str, seed: int) -> None:
 def cmd_plan(args: argparse.Namespace) -> int:
     _check_main_seed(args.name, args.seed)
     names = _agent_list(args.agents) or list(AGENTS)
-    repetitions = {n: (args.reps if args.reps else AGENTS[n].default_repetitions) for n in names}
-    plan = build_plan(args.name, args.seed, repetitions)
+    repetitions = {n: (args.reps if args.reps else agent_config(n).default_repetitions) for n in names}
+    plan = build_plan(args.name, args.seed, repetitions, conditions=_condition_list(args.conditions))
     save_plan(plan, plan_path(args.name), overwrite=args.force)
     print(f"Wrote {plan_path(args.name)}: {len(plan['runs'])} runs, seed {args.seed}.")
     for agent, n in repetitions.items():
@@ -80,11 +91,11 @@ def cmd_run(args: argparse.Namespace) -> int:
     if not args.execute:
         print(f"Dry run: {len(runs)} run(s) would be done. Add --execute to run them.")
         for run in runs:
-            command = " ".join(AGENTS[run["agent"]].command(f"http://127.0.0.1:{args.port}", run["run_seed"])[1:])
+            command = " ".join(agent_config(run["agent"]).command(f"http://127.0.0.1:{args.port}", run["run_seed"])[1:])
             print(f"  {run['order']:>3}  {run['label']}  HONEYPOT_VARIANT={run['condition']}  python {command}")
         return 0
 
-    paid = sum(AGENTS[r["agent"]].costs_money for r in runs)
+    paid = sum(agent_config(r["agent"]).costs_money for r in runs)
     if paid:
         print(f"WARNING: {paid} of these runs call the paid Anthropic API.")
     try:
@@ -234,7 +245,8 @@ def main() -> int:
     p = sub.add_parser("plan", help="Create a run plan (the randomised order of runs).")
     p.add_argument("--name", required=True, help="Used for the plan file name, e.g. pilot or main.")
     p.add_argument("--seed", type=int, default=DEFAULT_SEED)
-    p.add_argument("--agents", help=f"Comma-separated. Default: all of {', '.join(AGENTS)}")
+    p.add_argument("--agents", help=f"Comma-separated. Default: all of {', '.join(AGENTS)}. Supplementary agents must be named: {', '.join(n for n in known_agents() if n not in AGENTS)}")
+    p.add_argument("--conditions", help=f"Comma-separated. Default: all of {', '.join(CONDITIONS)}")
     p.add_argument("--reps", type=int, help="Repetitions per condition for every agent. Default: each agent's own default.")
     p.add_argument("--force", action="store_true", help="Replace an existing plan file.")
     p.set_defaults(func=cmd_plan)

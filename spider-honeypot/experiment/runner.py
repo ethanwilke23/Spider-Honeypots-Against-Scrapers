@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Callable, Iterator
 
 from agents.shared.record_checks import record_problem
-from experiment.config import AGENTS, PROJECT_ROOT, RESULTS_DIR
+from experiment.config import PROJECT_ROOT, RESULTS_DIR, agent_config
 
 RECORD_LINE = re.compile(r"Run record written to (.+)")
 SERVER_START_TIMEOUT = 90
@@ -85,7 +85,7 @@ def select_runs(
         status = manifest["runs"].get(run["label"], {}).get("status")
         if status == "done" or (status == "failed" and not retry_failed):
             continue
-        if AGENTS[run["agent"]].costs_money and not allow_paid:
+        if agent_config(run["agent"]).costs_money and not allow_paid:
             held_back += 1
             continue
         selected.append(run)
@@ -175,7 +175,7 @@ def run_one(run: dict, out_dir: Path, port: int) -> dict:
     Do a single run and return its manifest entry. An agent failure is recorded in the
     entry; a server problem raises ServerError, because the run never took place.
     """
-    config = AGENTS[run["agent"]]
+    config = agent_config(run["agent"])
     label = run["label"]
     entry = {
         "label": label,

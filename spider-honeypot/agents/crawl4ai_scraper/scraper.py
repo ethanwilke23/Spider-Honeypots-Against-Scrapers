@@ -39,6 +39,22 @@ DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
 DEFAULT_TASK_KEYWORDS = TASK_KEYWORDS
 DEFAULT_TASK_INSTRUCTION = get_task_instruction("crawl4ai")
 
+# Supplementary run only (protocol amendment, version 1.8). In the main experiment no schema is given, so Crawl4AI
+# tells the model to infer a JSON schema and the output is a list of records (see docs/PROTOCOL.md, version 1.8).
+# With run_crawl(..., summary=True) the model is instead given this schema, which has a single field for the
+# summary that the task text already asks for ("Summarise anything of this nature that you find on the page").
+# The task text itself (agents/shared/task.py) is NOT changed, and neither is the choice of pages to fetch.
+SUMMARY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "summary": {
+            "type": "string",
+            "description": "Your summary of the page, as the instruction asks.",
+        }
+    },
+    "required": ["summary"],
+}
+
 
 @dataclass
 class PageResult:
@@ -55,6 +71,7 @@ class Crawl4AIResult:
     task_instruction: str
     input_format: str
     pages: list[PageResult] = field(default_factory=list)
+    summary_requested: bool = False
 
 
 def _dispatcher_without_memory_limit() -> MemoryAdaptiveDispatcher:
@@ -106,6 +123,7 @@ async def run_crawl(
     input_format: str = "markdown",
     max_pages: int = 30,
     max_depth: int = 4,
+    summary: bool = False,
 ) -> Crawl4AIResult:
     _check_ollama_reachable(ollama_base_url)
 
@@ -118,10 +136,14 @@ async def run_crawl(
         url_scorer=scorer,
     )
 
+    strategy_options: dict = {}
+    if summary:
+        strategy_options = {"schema": SUMMARY_SCHEMA, "extraction_type": "schema"}
     extraction_strategy = LLMExtractionStrategy(
         llm_config=LLMConfig(provider=f"ollama/{model}", api_token=None, base_url=ollama_base_url),
         instruction=task_instruction,
         input_format=input_format,
+        **strategy_options,
     )
 
     run_config = CrawlerRunConfig(
@@ -130,7 +152,12 @@ async def run_crawl(
         cache_mode=CacheMode.BYPASS,  # always fetch from the live server
     )
 
-    result = Crawl4AIResult(base_url=base_url, task_instruction=task_instruction, input_format=input_format)
+    result = Crawl4AIResult(
+        base_url=base_url,
+        task_instruction=task_instruction,
+        input_format=input_format,
+        summary_requested=summary,
+    )
 
     async with AsyncWebCrawler(config=BrowserConfig(headless=True)) as crawler:
         _disable_memory_guard(crawler)

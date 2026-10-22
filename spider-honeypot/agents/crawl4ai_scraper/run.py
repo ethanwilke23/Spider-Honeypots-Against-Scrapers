@@ -14,6 +14,11 @@ Usage (the server and Ollama must already be running):
 Each run writes agent_runs/crawl4ai/<input_format>_<timestamp>.json, so
 markdown and html runs are easy to tell apart.
 
+Supplementary run (protocol amendment, version 1.8): with --summary the model is given a one-field schema for the
+summary that the task already asks for (see scraper.py), and the record is written to
+agent_runs/crawl4ai_summary/<input_format>_summary_<timestamp>.json, so it can never be mixed up with the 240 runs
+of the main experiment. The scheduler moves every record to its plan's own folder anyway.
+
 Crawl4AI does not expose the browser's cookies, so its runs cannot be
 joined to the server logs by session_id. Join them by time window instead.
 """
@@ -30,6 +35,7 @@ from agents.crawl4ai_scraper.scraper import DEFAULT_OLLAMA_BASE_URL, run_crawl
 from agents.shared.record_checks import crawl4ai_problem
 
 OUTPUT_DIR = Path(__file__).resolve().parents[2] / "agent_runs" / "crawl4ai"
+SUMMARY_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "agent_runs" / "crawl4ai_summary"
 
 
 def main() -> None:
@@ -53,6 +59,11 @@ def main() -> None:
     )
     parser.add_argument("--max-pages", type=int, default=30)
     parser.add_argument("--max-depth", type=int, default=4)
+    parser.add_argument(
+        "--summary",
+        action="store_true",
+        help="Supplementary run (protocol 1.8): the model fills a one-field summary schema instead of inferring its own. Off by default.",
+    )
     args = parser.parse_args()
 
     result = asyncio.run(
@@ -63,12 +74,15 @@ def main() -> None:
             input_format=args.input_format,
             max_pages=args.max_pages,
             max_depth=args.max_depth,
+            summary=args.summary,
         )
     )
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir = SUMMARY_OUTPUT_DIR if args.summary else OUTPUT_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    out_path = OUTPUT_DIR / f"{args.input_format}_{timestamp}.json"
+    stem = f"{args.input_format}_summary" if args.summary else args.input_format
+    out_path = out_dir / f"{stem}_{timestamp}.json"
     record = {
         "agent": "crawl4ai",
         "run_at": timestamp,
@@ -76,6 +90,7 @@ def main() -> None:
         "task_instruction": result.task_instruction,
         "input_format": result.input_format,
         "model": args.model,
+        "summary_requested": result.summary_requested,
         "pages_visited": len(result.pages),
         "pages": [dataclasses.asdict(p) for p in result.pages],
     }

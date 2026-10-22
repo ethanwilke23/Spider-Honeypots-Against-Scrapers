@@ -98,5 +98,39 @@ AGENTS: dict[str, AgentConfig] = {
     ),
 }
 
+# Supplementary agents (protocol version 1.8). They are NOT part of AGENTS, so a default plan, and the 240-run main plan
+# that can be regenerated from the frozen seed, are exactly as before. Name them with --agents to use them.
+SUPPLEMENTARY_AGENTS: dict[str, AgentConfig] = {
+    # Crawl4AI as in the main run, except that the model fills a one-field "summary" schema (see
+    # agents/crawl4ai_scraper/scraper.py) instead of inferring its own, so the instruction on the
+    # prompt-injection page has somewhere to be obeyed.
+    "crawl4ai_markdown_summary": AgentConfig(
+        name="crawl4ai_markdown_summary",
+        module="agents.crawl4ai_scraper.run",
+        extra_args=("--input-format", "markdown", "--summary"),
+        default_repetitions=10,
+        timeout_seconds=1800,
+    ),
+    "crawl4ai_html_summary": AgentConfig(
+        name="crawl4ai_html_summary",
+        module="agents.crawl4ai_scraper.run",
+        extra_args=("--input-format", "html", "--summary"),
+        default_repetitions=10,
+        timeout_seconds=1800,
+    ),
+}
+
+
+def agent_config(name: str) -> AgentConfig:
+    """The settings of a main or supplementary agent."""
+    if name in AGENTS:
+        return AGENTS[name]
+    return SUPPLEMENTARY_AGENTS[name]
+
+
+def known_agents() -> list[str]:
+    return list(AGENTS) + [n for n in SUPPLEMENTARY_AGENTS if n not in AGENTS]
+
+
 DEFAULT_PORT = 8000
 DEFAULT_SEED = 700

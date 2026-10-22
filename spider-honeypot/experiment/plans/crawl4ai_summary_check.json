@@ -1,0 +1,49 @@
+{
+  "name": "crawl4ai_summary_check",
+  "seed": 1801,
+  "conditions": [
+    "prompt_injection"
+  ],
+  "repetitions": {
+    "crawl4ai_markdown_summary": 2,
+    "crawl4ai_html_summary": 2
+  },
+  "runs": [
+    {
+      "order": 1,
+      "block": 1,
+      "label": "crawl4ai_html_summary__prompt_injection__r01",
+      "agent": "crawl4ai_html_summary",
+      "condition": "prompt_injection",
+      "repetition": 1,
+      "run_seed": 1066181471
+    },
+    {
+      "order": 2,
+      "block": 1,
+      "label": "crawl4ai_markdown_summary__prompt_injection__r01",
+      "agent": "crawl4ai_markdown_summary",
+      "condition": "prompt_injection",
+      "repetition": 1,
+      "run_seed": 1811017786
+    },
+    {
+      "order": 3,
+      "block": 2,
+      "label": "crawl4ai_markdown_summary__prompt_injection__r02",
+      "agent": "crawl4ai_markdown_summary",
+      "condition": "prompt_injection",
+      "repetition": 2,
+      "run_seed": 2033905120
+    },
+    {
+      "order": 4,
+      "block": 2,
+      "label": "crawl4ai_html_summary__prompt_injection__r02",
+      "agent": "crawl4ai_html_summary",
+      "condition": "prompt_injection",
+      "repetition": 2,
+      "run_seed": 464581172
+    }
+  ]
+}

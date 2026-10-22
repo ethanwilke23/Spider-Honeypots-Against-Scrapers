@@ -214,7 +214,9 @@ agent and server output of each run, and the exported server records. The plan f
 
 After the main experiment it was found that Crawl4AI's output could not show whether the instruction on the
 prompt-injection page was obeyed (the model returned records, not a summary). The supplementary run repeats only
-the Crawl4AI prompt-injection runs with a one-field `summary` schema (`--summary`). Its agents,
+the Crawl4AI prompt-injection runs with a one-field `summary` schema (`--summary`). Outcome: the check runs showed that
+`llama3.2` does not reliably fill the schema, so the 20 runs were not made (protocol 1.8, item 8). The code is kept, off by
+default. Its agents,
 `crawl4ai_markdown_summary` and `crawl4ai_html_summary`, are not part of the main plan. See `docs/PROTOCOL.md`, version 1.8.
 
 ```bash

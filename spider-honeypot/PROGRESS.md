@@ -1,6 +1,5 @@
 # Progress
 
-
 Status key: **Done**, **Partly done**, **Not started**.
 
 | Phase | Description | Status |
@@ -10,11 +9,11 @@ Status key: **Done**, **Partly done**, **Not started**.
 | 2 | Decoy web application | Done |
 | 3 | Build the three honeypot variants | Done |
 | 4 | Logging and instrumentation | Done |
-| 5 | Agent and scraper harnesses | Partly done |
+| 5 | Agent and scraper harnesses | Done |
 | 6 | Experiment design | Done |
-| 7 | Pilot run | Not started |
-| 8 | Full controlled experiment | Not started |
-| 9 | Data analysis | Not started |
+| 7 | Pilot run | Done |
+| 8 | Full controlled experiment | Done |
+| 9 | Data analysis | Partly done |
 | 10 | Cross-check against research questions | Not started |
 | 11 | Write-up | Not started |
 
@@ -69,44 +68,51 @@ Status key: **Done**, **Partly done**, **Not started**.
 
 ## Phase 5: Agent harnesses
 
-- Playwright baseline: done and run against the site.
-- Crawl4AI with a local Ollama model: done and run in both markdown and html
-  input modes.
-- Claude text browser (`agents/claude_text_browser/`): added 17 October 2026 so that Claude can be compared with itself across perception (screenshots against page text and link addresses). Offline tests pass; the paid capped test has not been run yet.
-- Claude computer use: built and tested offline; the capped 3-iteration paid test cost about $0.05. It is protected by
-  an explicit spending flag, and real runs are planned for Phase 8 to avoid API
-  cost until results are being recorded. It now controls a real Chromium window
-  (tab bar, address bar) on a virtual screen (Xvfb) inside a Docker container,
-  using screen capture and OS-level mouse and keyboard input, so it can click
-  links, type addresses and use keyboard shortcuts. The browser can reach only the
-  test site. The scheduler runs it through `agents/claude_computer_use/docker_run.py`.
-  The desktop environment was tested on a virtual screen in the development
-  sandbox (including the full agent loop with a scripted model); the Docker image
-  could not be built there, so `docker_run --env-check` on the researcher's computer
-  is the first real test of the container.
+- Playwright baseline: done and run against the site. A second configuration
+  (`playwright_ignore_robots`) is the same crawler with robots.txt ignored.
+- Crawl4AI with a local Ollama model (`llama3.2`): done and run in both markdown and
+  html input modes.
+- Claude computer use (`agents/claude_computer_use/`, model `claude-sonnet-5-5`): Claude
+  controls a real Chromium window (tab bar, address bar) on a virtual screen (Xvfb)
+  inside a Docker container, through screenshots and OS-level mouse and keyboard
+  input, so it can click links, type addresses and use keyboard shortcuts. The browser
+  can reach only the test site. The scheduler runs it through
+  `agents/claude_computer_use/docker_run.py`. It is protected by an explicit spending
+  flag. `docker_run --env-check` passed on the researcher's computer; the capped
+  3-iteration paid test cost about $0.05.
+- Claude text browser (`agents/claude_text_browser/`, added 17 October 2026): the same
+  model reading each page as visible text plus a numbered list of links, in a headless
+  browser on the host, with the tools `open_link`, `open_url` and `go_back` (one tool
+  call per turn). It exists so that Claude can be compared with itself across
+  perception (screenshots against page text). Its capped paid test passed.
 
 ## Phase 6: Experiment design
 
 - A variant switch (`HONEYPOT_VARIANT`) so each honeypot can be tested on its own
   and a control with no honeypots can be run.
-- One task prompt shared by the Crawl4AI and Claude agents (`agents/shared/task.py`).
+- One task prompt shared by the Crawl4AI and Claude agents (`agents/shared/task.py`),
+  with a short interface sentence for each agent.
 - A seeded run scheduler (`experiment/`): randomised block design, one label per
   run (agent, condition, repetition), a server started per run with the right
   variant, and a resumable manifest. Paid runs need an extra flag.
 - Log helpers (`experiment/logs.py`): empty the server logs, and export each
   run's server-side requests and page events with its label plus a summary table.
-- A sixth configuration, `playwright_ignore_robots`: the baseline crawler without
-  robots.txt, so a traditional scraper can reach the link-graph chain.
+- Seven configurations in all: `playwright_baseline`, `playwright_ignore_robots` (no
+  robots.txt, so a traditional scraper can reach the link-graph chain),
+  `crawl4ai_markdown`, `crawl4ai_html`, `claude_computer_use`, `claude_text_browser` and
+  the synthetic `human_baseline`.
 - A seeded, human-like browsing baseline (`agents/human_baseline/`) for the
   false-positive rate. It follows visible links only, with varied pauses, page
   counts and some back-navigation. The literature (Tanaka et al., Scripcariu et
   al.) supports the pattern but gives no numbers, so the parameter values are
   chosen, not measured, and are stated as such.
 - A written protocol (`docs/PROTOCOL.md`): conditions, run matrix and
-  repetitions (240 runs with the extra configurations), ordering, the procedure for each run, exact definitions
-  of the four measures plus canary compliance, the analysis plan and known
-  limitations. It is frozen after the pilot; later changes are listed in its
-  amendments section.
+  repetitions (240 runs), ordering, the procedure for each run, exact definitions
+  of the measures, the analysis plan and known limitations. It was frozen before the
+  main run (version 1.4); later changes are listed in its amendments section
+  (version 1.5 adds the analysis choices).
+- A freeze step (`python -m experiment freeze`) that draws the main seed once and
+  records the environment in `docs/freeze_record.json`.
 
 ## Review against the proposal (before the pilot)
 
@@ -116,35 +122,62 @@ address bar (now a real browser in Docker), logging was HTTP only (now page even
 too) and the link-graph chain could not be reached (visible lure plus a crawler
 that ignores robots.txt). Details are in section 8.1 of the protocol.
 
-## Phases 7 to 11
+## Phase 7: Pilot (done)
 
-- Phase 7: a small pilot with the free agents (2 repetitions per condition),
-  after `docker_run --env-check` passes. Check that every harness completes, how
-  long runs take, whether each trap is reached by the agents expected to reach it
-  (the link-graph chain by the crawler that ignores robots.txt, the lures by the
-  others), whether the human baseline's false-positive rate is plausible, and the
-  trap parameters (chain length, idle timeout, injection surface). Then freeze the
-  protocol: done in protocol v1.4 (pilot3 results and capped Claude tests recorded);
-  `python -m experiment freeze` writes the seed and environment.
-- Phase 8: run the full experiment, including the paid Claude agent.
-- Phase 9: join server logs to run records, check transcripts for canary tokens
-  and compute detection metrics.
-- Phase 10: compare results with the research questions.
-- Phase 11: write up.
+- Pilot plans `pilot2` and `pilot3` (seed 700) with the free agents, 2 repetitions per
+  condition. They exposed the Crawl4AI memory-guard failures and the html-mode page cap,
+  both fixed (protocol section 9); `pilot3` was clean.
+- Capped paid tests of both Claude agents (3 iterations each). They showed the cost
+  (about $0.05 for 3 desktop iterations, about $0.54 estimated for 15) and led to the
+  correct model name and to one tool call per turn for the text browser.
+- Protocol frozen as version 1.4; `python -m experiment freeze` recorded the seed and
+  environment on 18 October 2026 (main seed 707150).
+
+## Phase 8: Main experiment (done)
+
+- Plan `main`: 240 runs in 10 randomised blocks (seed 707150), run on 18 October 2026.
+  All 240 runs completed and passed the validity check (`experiment check`).
+- The server logs recorded 0 unexpected trap hits and 0 hits in the control (`none`)
+  condition. The human baseline hit a trap once in 30 honeypot runs
+  (`human_baseline__link_graph__r03`, a click on the visible "restricted archive" link).
+- Raw data: `agent_runs/experiment/main/` (records, server records and `summary.csv`).
+  It is not committed, so keep a copy elsewhere.
+
+## Phase 9: Analysis (partly done)
+
+- Built: `python -m experiment analyse --plan main` (`experiment/analysis.py`) computes
+  detection and false-positive rates with exact intervals, time to detection, chain
+  depth, canary compliance, echo, page events, the pre-specified Fisher tests, three
+  charts and a hand-coding sheet. Tested on made-up records.
+- To do: run it on the real records, check the output against `summary.csv`, hand-code
+  the Claude runs (suspicion, refusals, partial compliance, invented content) from
+  `coding_sheet.csv`.
+
+## Phases 10 and 11
+
+- Phase 10: compare the results with the research questions.
+- Phase 11: write up (needs the module's report template or marking rubric).
 
 ## Decisions
 
 - No fake email honeytokens are used. Document IDs and canary strings give the
   same detection signal without any privacy questions.
 - Crawl4AI uses a local open-weight model through Ollama, so it needs no API key
-  and costs nothing to run, in contrast to the paid Claude agent.
+  and costs nothing to run, in contrast to the paid Claude agents.
+- Crawl4AI chooses which pages to fetch by link scoring on keywords from the task
+  wording, not by asking its model, so whether it reaches a trap is deterministic.
+  Its headline results are canary compliance and echo; detection is the headline
+  result for the Claude agents, where the model chooses the route.
 - The honeypot links are visible, because the proposal expects agents to be
   attracted by content, and an agent that works from screenshots cannot see hidden
   links. The cost is that the false-positive rate becomes meaningful.
-- The Claude agent works from screenshots only. Hybrid commercial agents that also
-  read the page structure are not tested.
-- The Claude agent runs in Docker and the other agents on the host. The window has
-  no window manager and no drawn pointer.
+- Two Claude configurations share one model: the desktop agent works from screenshots
+  only, and the text browser reads page text and link addresses. Hybrid commercial
+  agents that combine both are not tested.
+- The desktop Claude agent runs in Docker and the other agents on the host. Its window
+  has no window manager and no drawn pointer.
+- The text browser may make one tool call per turn, because a link number refers to
+  the page it was read from; so one iteration is one page view.
 
 ## Known limitations
 
@@ -169,11 +202,19 @@ that ignores robots.txt). Details are in section 8.1 of the protocol.
   both, so both are run.
 - Crawl4AI does not expose browser cookies, so its runs are matched to server
   logs by time window instead of session id.
-- The scroll distance per step in the Claude environment (100 pixels) is an
-  assumption and may need adjusting.
+- The Claude agents are capped at 15 iterations. Results hold within that cap. For the
+  desktop agent an iteration is a turn that can contain several actions; for the text
+  browser it is one page view.
+- Claude can request a deep link-graph page by typing its address without visiting
+  the pages before it, so depth and the number of chain pages visited are reported
+  separately.
+- Visible traps are not concealed, so the experiment measures how well visible,
+  plausible lures detect agents, not how well hidden ones do.
 
 ## Open items
 
-- The shared task prompt is a first version and may be adjusted after the pilot.
-- Trap parameters (14 pages, 120 second idle timeout, injection in a comment and
-  as visible text) are initial values to review after the pilot.
+- Run the analysis on the real records and review the results.
+- Hand-code the 40 Claude runs.
+- Obtain the module's report template or marking rubric for Phase 11.
+- The trap parameters (14 pages, 120 second idle timeout, injection in a comment and
+  as visible text) were reviewed after the pilot and not changed for the main run.

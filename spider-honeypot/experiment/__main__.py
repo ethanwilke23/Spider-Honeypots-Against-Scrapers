@@ -8,6 +8,7 @@ Command line for the experiment scheduler.
     python -m experiment check --plan pilot              # finds runs that did not really take place
     python -m experiment logs export --plan pilot        # save each run's server-side records
     python -m experiment logs reset --yes                # empty the server logs
+    python -m experiment analyse --plan main             # tables, charts and the hand-coding sheet
     python -m experiment freeze                          # draw the main seed once and record the environment
     python -m experiment plan --name main --seed <frozen seed>
 
@@ -179,6 +180,15 @@ def cmd_freeze(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_analyse(args: argparse.Namespace) -> int:
+    from experiment.analysis import run_analysis
+
+    out_dir = run_analysis(args.plan)
+    print(f"Analysis written to {out_dir}")
+    print(f"Start with {out_dir / 'results.md'}")
+    return 0
+
+
 def cmd_logs(args: argparse.Namespace) -> int:
     try:
         return _logs_command(args)
@@ -252,6 +262,10 @@ def main() -> int:
     f.add_argument("--force", action="store_true", help="Replace an existing freeze record (draws a new seed unless --keep-seed).")
     f.add_argument("--keep-seed", action="store_true", help="With --force: keep the recorded seed and refresh only the environment.")
     f.set_defaults(func=cmd_freeze)
+
+    a = sub.add_parser("analyse", help="Compute the measures, tables and charts for a finished plan (reads files only).")
+    a.add_argument("--plan", required=True)
+    a.set_defaults(func=cmd_analyse)
 
     g = sub.add_parser("logs", help="Show, export or empty the server logs.")
     g.add_argument("action", choices=["status", "export", "reset"])

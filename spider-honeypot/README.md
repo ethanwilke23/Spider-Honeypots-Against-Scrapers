@@ -9,14 +9,13 @@ project builds a local, fully synthetic decoy website containing three honeypot
 variants, and tests how different scrapers behave when they meet them.
 
 > **Repository history note.** This repository was created on 14 October 2026,
-> after the implementation of Phases 0 to 5 was already complete. Version
+> after the implementation of Phases 0 to 5 was already complete including much of the planning and backbones for the rest of the phases. Version
 > control was not used during initial development. The earlier commits were
 > created retrospectively, grouping the existing code by development phase in
 > the order it was built. Their dates therefore show when the repository was
 > created, not when the work was done, and intermediate commits are not
 > guaranteed to run on their own. `PROGRESS.md` records the work by phase.
-> History from this point on is real.
-
+> All work was done locally by one developer (me) on one single device, hence the unfortunate mistake of forgetting to begin version control despite a large amount of work and planning already being completed.
 ## What is being tested
 
 The decoy site is a fictional company website, "Dunwoodie Data Analytics". It
@@ -241,13 +240,25 @@ agents/
 docker/claude-desktop/  Dockerfile for the Claude environment
   human_baseline/       Scripted human-like browsing, for the false-positive rate
   shared/task.py        The task text shared by the LLM-based agents
-experiment/             Run planning, the experiment runner and the freeze record (freeze.py)
+experiment/             Run planning, the experiment runner, the freeze record (freeze.py) and the analysis (analysis.py, stats.py)
   plans/                Saved run plans
 docs/PROTOCOL.md       Experiment protocol: design, measures and limitations
 tests/                  Unit tests
 docker-compose.yml      Local Postgres
 PROGRESS.md             Status by phase
 ```
+
+### Analysing a finished plan
+
+```bash
+pip install matplotlib                          # once, for the charts
+python -m experiment analyse --plan main
+```
+
+This reads the saved records (it never touches the database or the paid API) and writes
+`agent_runs/experiment/main/analysis/`: `results.md` (all tables as text), CSV files for each
+table, `runs.csv` (one row per run), `comparisons.csv` (the Fisher tests), three charts
+(`fig_*.png`) and `coding_sheet.csv` for hand-coding the Claude runs.
 
 ### Freezing before the main run
 
